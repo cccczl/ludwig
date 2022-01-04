@@ -43,7 +43,7 @@ def run_api_experiment_separated_datasets(input_features, output_features, data_
     config = {
         "input_features": input_features,
         "output_features": output_features,
-        "combiner": {"type": "concat", "fc_size": 14},
+        "combiner": {"type": "concat", "output_size": 14},
         "training": {"epochs": 2},
     }
 
@@ -174,7 +174,7 @@ def test_api_train_online(csv_filename):
     config = {
         "input_features": input_features,
         "output_features": output_features,
-        "combiner": {"type": "concat", "fc_size": 14},
+        "combiner": {"type": "concat", "output_size": 14},
     }
     model = LudwigModel(config)
 
@@ -195,7 +195,7 @@ def test_api_training_set(csv_filename):
         config = {
             "input_features": input_features,
             "output_features": output_features,
-            "combiner": {"type": "concat", "fc_size": 14},
+            "combiner": {"type": "concat", "output_size": 14},
         }
         model = LudwigModel(config)
         model.train(training_set=data_csv, validation_set=val_csv, test_set=test_csv)
@@ -215,7 +215,7 @@ def test_api_training_determinism(csv_filename):
         config = {
             "input_features": input_features,
             "output_features": output_features,
-            "combiner": {"type": "concat", "fc_size": 14},
+            "combiner": {"type": "concat", "output_size": 14},
         }
 
         # Train the model 3 times:
@@ -280,7 +280,7 @@ def run_api_commands(
     config = {
         "input_features": input_features,
         "output_features": output_features,
-        "combiner": {"type": "concat", "fc_size": 14},
+        "combiner": {"type": "concat", "output_size": 14},
         "training": {"epochs": 2},
     }
 
@@ -436,7 +436,7 @@ def test_api_callbacks(csv_filename):
         config = {
             "input_features": input_features,
             "output_features": output_features,
-            "combiner": {"type": "concat", "fc_size": 14},
+            "combiner": {"type": "concat", "output_size": 14},
             "training": {"epochs": epochs, "batch_size": batch_size},
         }
         model = LudwigModel(config, callbacks=[mock_callback])

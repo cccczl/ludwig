@@ -54,7 +54,7 @@ def run_experiment(input_features, output_features, **kwargs):
             "backend": "local",
             "input_features": input_features,
             "output_features": output_features,
-            "combiner": {"type": "concat", "fc_size": 64, "num_fc_layers": 5},
+            "combiner": {"type": "concat", "output_size": 64, "num_fc_layers": 5},
             "training": {"epochs": 2},
         }
 
