@@ -22,16 +22,19 @@ from ludwig.utils.torch_utils import LudwigModule, reg_loss
 logger = logging.getLogger(__name__)
 
 
-def add_suffix_to_feature_names(features_def: List[Dict]) -> Tuple[List[Dict], Dict[str, str]]:
-    """Suffixes '__ludwig' to all feature names. Returns the revised feature definitions and name mapping.
+def apply_suffix_to_feature_names(features_def: List[Dict]) -> Tuple[List[Dict], Dict[str, str]]:
+    """Applies suffixes to all feature names.
 
-    Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict).
-
-    The keys of a torch.nn.ModuleDict cannot have the same name as any ModuleDict class attribute.
+    Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict). However, the keys of a
+    torch.nn.ModuleDict cannot have the same name as any ModuleDict class attribute.
 
     >>> torch.nn.ModuleDict({'type': torch.nn.Module()})    # Raises KeyError "attribute 'type' already exists"
 
-    Suffixing guarantees that we can bypass this restriction, regardless of the user's feature names.
+    Applying suffixes to feature names (internally) is more overhead, but it also guarantees that we can bypass this
+    restriction, regardless of the user's original feature names.
+
+    Returns:
+        Tuple of (feature definitions with new names, suffixed name -> original name mapping)
     """
     feature_name_hash_map = {}
     for feature in features_def:
@@ -49,10 +52,10 @@ class ECD(LudwigModule):
         output_features_def,
         random_seed=None,
     ):
-        self._input_features_def, _ = add_suffix_to_feature_names(copy.deepcopy(input_features_def))
+        self._input_features_def, _ = apply_suffix_to_feature_names(copy.deepcopy(input_features_def))
         self._combiner_def = copy.deepcopy(combiner_def)
         # The output_feature_original_name_map should be used to lookup the original, unsuffixed feature name.
-        self._output_features_def, self.output_feature_original_name_map = add_suffix_to_feature_names(
+        self._output_features_def, self.output_feature_original_name_map = apply_suffix_to_feature_names(
             copy.deepcopy(output_features_def)
         )
 
