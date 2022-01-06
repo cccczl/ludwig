@@ -27,13 +27,11 @@ def add_suffix_to_feature_names(features_def: List[Dict]) -> Tuple[List[Dict], D
 
     Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict).
 
-    torch.nn.ModuleDict has an implicit restriction that the keys cannot be any of ModuleDict's existing class
-    attributes.
+    The keys of a torch.nn.ModuleDict cannot have the same name as any ModuleDict class attribute.
 
     >>> torch.nn.ModuleDict({'type': torch.nn.Module()})    # Raises KeyError "attribute 'type' already exists"
 
-    Suffixing guarantees that no feature names will collide with any of torch.nn.ModuleDict's built-in class attributes,
-    e.g. 'type' or 'to'.
+    Suffixing guarantees that we can bypass this restriction, regardless of the user's feature names.
     """
     feature_name_hash_map = {}
     for feature in features_def:
@@ -53,6 +51,7 @@ class ECD(LudwigModule):
     ):
         self._input_features_def, _ = add_suffix_to_feature_names(copy.deepcopy(input_features_def))
         self._combiner_def = copy.deepcopy(combiner_def)
+        # The output_feature_original_name_map should be used to lookup the original, unsuffixed feature name.
         self._output_features_def, self.output_feature_original_name_map = add_suffix_to_feature_names(
             copy.deepcopy(output_features_def)
         )
