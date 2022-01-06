@@ -23,12 +23,12 @@ from torch import Tensor
 from ludwig.constants import COLUMN, HIDDEN, LENGTHS, LOSS, NAME, PROC_COLUMN, TYPE
 from ludwig.decoders.registry import get_decoder_cls
 from ludwig.encoders.registry import get_encoder_cls
-from ludwig.features.feature_utils import compute_feature_hash
+from ludwig.features.feature_utils import compute_feature_hash, get_input_size_with_dependencies
 from ludwig.modules.fully_connected_modules import FCStack
 from ludwig.modules.loss_modules import get_loss_cls
 from ludwig.modules.metric_registry import get_metric_classes, get_metric_cls
 from ludwig.modules.reduction_modules import SequenceReducer
-from ludwig.utils import feature_utils, output_feature_utils
+from ludwig.utils import output_feature_utils
 from ludwig.utils.metric_utils import get_scalar_from_ludwig_metric
 from ludwig.utils.misc_utils import merge_dict
 from ludwig.utils.torch_utils import LudwigModule
@@ -198,9 +198,7 @@ class OutputFeature(BaseFeature, LudwigModule, ABC):
         logger.debug(" output feature fully connected layers")
         logger.debug("  FCStack")
 
-        self.input_size = feature_utils.get_input_size_with_dependencies(
-            self.input_size, self.dependencies, other_output_features
-        )
+        self.input_size = get_input_size_with_dependencies(self.input_size, self.dependencies, other_output_features)
 
         self.fc_stack = FCStack(
             first_layer_input_size=self.input_size,
