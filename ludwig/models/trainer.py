@@ -833,7 +833,8 @@ class Trainer(BaseTrainer):
                 # init tables
                 tables = OrderedDict()
                 for output_feature_name, output_feature in output_features.items():
-                    tables[output_feature_name] = [[output_feature_name] + metrics_names[output_feature_name]]
+                    original_feature_name = self.model.output_feature_original_name_map[output_feature_name]
+                    tables[original_feature_name] = [[original_feature_name] + metrics_names[output_feature_name]]
                 tables[COMBINED] = [[COMBINED, LOSS]]
 
                 # eval metrics on train
@@ -1011,7 +1012,7 @@ class Trainer(BaseTrainer):
                     metrics_log[output_feature][metric].append(score)
                     scores.append(score)
 
-            tables[output_feature].append(scores)
+            tables[self.model.output_feature_original_name_map[output_feature]].append(scores)
 
         metrics_log[COMBINED][LOSS].append(results[COMBINED][LOSS])
         tables[COMBINED].append([dataset_name, results[COMBINED][LOSS]])

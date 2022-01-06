@@ -22,6 +22,24 @@ from ludwig.utils.torch_utils import LudwigModule, reg_loss
 logger = logging.getLogger(__name__)
 
 
+def add_suffix_to_feature_names(features_def: List[Dict]) -> Tuple[List[Dict], Dict[str, str]]:
+    """Suffixes '__ludwig' to all feature names. Returns the revised feature definitions and name mapping.
+
+    Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict). Suffixiing guarantees that no feature
+    names will collide with any of torch.nn.ModuleDict's built-in class attributes, e.g. 'type' or 'to'.
+
+    >>> torch.nn.ModuleDict({'type': torch.nn.Module()})    # Raises KeyError "attribute 'type' already exists"
+    """
+    # We use a torch ModuleDict to store all of the feature nn.Modules, keyed by the feature name. This imposes an
+    # additional restriction that feature names can’t be any of ModuleDict ’s pre-existing class attributes.
+    feature_name_hash_map = {}
+    for feature in features_def:
+        internal_feature_name = feature[NAME] + "__ludwig"
+        feature_name_hash_map[internal_feature_name] = feature[NAME]
+        feature[NAME] = internal_feature_name
+    return features_def, feature_name_hash_map
+
+
 class ECD(LudwigModule):
     def __init__(
         self,
@@ -30,11 +48,11 @@ class ECD(LudwigModule):
         output_features_def,
         random_seed=None,
     ):
-        # Deep copy to prevent TensorFlow from hijacking the dicts within the config and
-        # transforming them into _DictWrapper classes, which are not JSON serializable.
-        self._input_features_df = copy.deepcopy(input_features_def)
+        self._input_features_def, _ = add_suffix_to_feature_names(copy.deepcopy(input_features_def))
         self._combiner_def = copy.deepcopy(combiner_def)
-        self._output_features_df = copy.deepcopy(output_features_def)
+        self._output_features_def, self.output_feature_original_name_map = add_suffix_to_feature_names(
+            copy.deepcopy(output_features_def)
+        )
 
         self._random_seed = random_seed
 
@@ -46,7 +64,7 @@ class ECD(LudwigModule):
         # ================ Inputs ================
         self.input_features = torch.nn.ModuleDict()
         try:
-            self.input_features.update(build_inputs(input_features_def))
+            self.input_features.update(build_inputs(self._input_features_def))
         except KeyError as e:
             raise KeyError(
                 f"An input feature has a name that conflicts with a class attribute of torch's ModuleDict: {e}"
@@ -63,7 +81,7 @@ class ECD(LudwigModule):
 
         # ================ Outputs ================
         self.output_features = torch.nn.ModuleDict()
-        self.output_features.update(build_outputs(output_features_def, self.combiner))
+        self.output_features.update(build_outputs(self._output_features_def, self.combiner))
 
         # ================ Combined loss metric ================
         self.eval_loss_metric = torchmetrics.MeanMetric()
