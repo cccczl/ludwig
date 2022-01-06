@@ -25,13 +25,16 @@ logger = logging.getLogger(__name__)
 def add_suffix_to_feature_names(features_def: List[Dict]) -> Tuple[List[Dict], Dict[str, str]]:
     """Suffixes '__ludwig' to all feature names. Returns the revised feature definitions and name mapping.
 
-    Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict). Suffixiing guarantees that no feature
-    names will collide with any of torch.nn.ModuleDict's built-in class attributes, e.g. 'type' or 'to'.
+    Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict).
+
+    torch.nn.ModuleDict has an implicit restriction that the keys cannot be any of ModuleDict's existing class
+    attributes.
 
     >>> torch.nn.ModuleDict({'type': torch.nn.Module()})    # Raises KeyError "attribute 'type' already exists"
+
+    Suffixing guarantees that no feature names will collide with any of torch.nn.ModuleDict's built-in class attributes,
+    e.g. 'type' or 'to'.
     """
-    # We use a torch ModuleDict to store all of the feature nn.Modules, keyed by the feature name. This imposes an
-    # additional restriction that feature names can’t be any of ModuleDict ’s pre-existing class attributes.
     feature_name_hash_map = {}
     for feature in features_def:
         internal_feature_name = feature[NAME] + "__ludwig"
