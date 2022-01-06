@@ -78,6 +78,7 @@ def convert_to_dict(
 ):
     output = {}
     for of_name, output_feature in output_features.items():
+        of_name = of_name.strip("__ludwig")
         feature_keys = {k for k in predictions.columns if k.startswith(of_name)}
         feature_dict = {}
         for key in feature_keys:

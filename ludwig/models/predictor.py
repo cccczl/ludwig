@@ -254,8 +254,9 @@ class RemotePredictor(Predictor):
 def calculate_overall_stats(output_features, predictions, dataset, training_set_metadata):
     overall_stats = {}
     for of_name, output_feature in output_features.items():
+        of_name = of_name.strip("__ludwig")
         feature_metadata = output_feature.overall_statistics_metadata()
-        feature_metadata.update(training_set_metadata[output_feature.feature_name.strip("__ludwig")])
+        feature_metadata.update(training_set_metadata[of_name])
 
         feature_df = predictions.loc[:, predictions.columns.str.startswith(of_name)]
         feature_df = feature_df.rename(columns=lambda c: c[len(of_name) + 1 :])

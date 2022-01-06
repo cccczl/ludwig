@@ -14,6 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 import re
+from typing import List
 
 import numpy as np
 
@@ -52,3 +53,26 @@ def sanitize(name):
 def compute_feature_hash(feature: dict) -> str:
     preproc_hash = hash_dict(feature.get(PREPROCESSING, {}))
     return sanitize(feature[NAME]) + "_" + preproc_hash.decode("ascii")
+
+
+def get_input_size_with_dependencies(
+    combiner_output_size: int, dependencies: List[str], other_output_features  # Dict[str, "OutputFeature"]
+):
+    """Returns the input size for the first layer of this output feature's FC stack, accounting for dependencies on
+    other output features.
+
+    In the forward pass, the hidden states of any dependent output features get concatenated with the combiner's
+    output.
+
+    If this output feature depends on other output features, then the input size for this feature's FCStack is the
+    sum of the output sizes of other output features + the combiner's output size.
+    """
+    input_size_with_dependencies = combiner_output_size
+    for feature_name in dependencies:
+        suffixed_feature_name = feature_name + "__ludwig"
+        if other_output_features[suffixed_feature_name].num_fc_layers:
+            input_size_with_dependencies += other_output_features[suffixed_feature_name].fc_stack.output_shape[-1]
+        else:
+            # 0-layer FCStack. Use the output feature's input size.
+            input_size_with_dependencies += other_output_features[suffixed_feature_name].input_size
+    return input_size_with_dependencies

@@ -22,28 +22,6 @@ from ludwig.utils.torch_utils import LudwigModule, reg_loss
 logger = logging.getLogger(__name__)
 
 
-def apply_suffix_to_feature_names(features_def: List[Dict]) -> Tuple[List[Dict], Dict[str, str]]:
-    """Applies suffixes to all feature names.
-
-    Feature names are used as keys for feature dictionaries (torch.nn.ModuleDict). However, the keys of a
-    torch.nn.ModuleDict cannot have the same name as any ModuleDict class attribute.
-
-    >>> torch.nn.ModuleDict({'type': torch.nn.Module()})    # Raises KeyError "attribute 'type' already exists"
-
-    Applying suffixes to feature names (internally) is more overhead, but it also guarantees that we can bypass this
-    restriction, regardless of the user's original feature names.
-
-    Returns:
-        Tuple of (feature definitions with new names, suffixed name -> original name mapping)
-    """
-    feature_name_hash_map = {}
-    for feature in features_def:
-        internal_feature_name = feature[NAME] + "__ludwig"
-        feature_name_hash_map[internal_feature_name] = feature[NAME]
-        feature[NAME] = internal_feature_name
-    return features_def, feature_name_hash_map
-
-
 class ECD(LudwigModule):
     def __init__(
         self,
@@ -52,12 +30,9 @@ class ECD(LudwigModule):
         output_features_def,
         random_seed=None,
     ):
-        self._input_features_def, _ = apply_suffix_to_feature_names(copy.deepcopy(input_features_def))
+        self._input_features_def = copy.deepcopy(input_features_def)
         self._combiner_def = copy.deepcopy(combiner_def)
-        # The output_feature_original_name_map should be used to lookup the original, unsuffixed feature name.
-        self._output_features_def, self.output_feature_original_name_map = apply_suffix_to_feature_names(
-            copy.deepcopy(output_features_def)
-        )
+        self._output_features_def = copy.deepcopy(output_features_def)
 
         self._random_seed = random_seed
 
@@ -96,7 +71,7 @@ class ECD(LudwigModule):
 
     def get_model_inputs(self):
         inputs = {
-            input_feature_name: input_feature.create_sample_input()
+            input_feature_name.strip("__ludwig"): input_feature.create_sample_input()
             for input_feature_name, input_feature in self.input_features.items()
         }
         return inputs
@@ -143,8 +118,6 @@ class ECD(LudwigModule):
         else:
             targets = None
 
-        assert inputs.keys() == self.input_features.keys()
-
         # Convert inputs to tensors.
         for input_feature_name, input_values in inputs.items():
             if not isinstance(input_values, torch.Tensor):
@@ -154,7 +127,7 @@ class ECD(LudwigModule):
 
         encoder_outputs = {}
         for input_feature_name, input_values in inputs.items():
-            encoder = self.input_features[input_feature_name]
+            encoder = self.input_features[input_feature_name + "__ludwig"]
             encoder_output = encoder(input_values)
             encoder_outputs[input_feature_name] = encoder_output
 
@@ -164,6 +137,7 @@ class ECD(LudwigModule):
         output_logits = {}
         output_last_hidden = {}
         for output_feature_name, output_feature in self.output_features.items():
+            output_feature_name = output_feature_name.strip("__ludwig")
             # Use the presence or absence of targets to signal training or prediction.
             target = targets[output_feature_name] if targets is not None else None
             decoder_outputs = output_feature(combiner_outputs, output_last_hidden, mask=mask, target=target)
@@ -178,46 +152,24 @@ class ECD(LudwigModule):
             output_last_hidden[output_feature_name] = decoder_outputs["last_hidden"]
         return output_logits
 
-    def predictions(self, inputs, output_features=None):
-        # check validity of output_features
-        if output_features is None:
-            of_list = self.output_features
-        elif isinstance(output_features, str):
-            if output_features == "all":
-                of_list = set(self.output_features.keys())
-            elif output_features in self.output_features:
-                of_list = [output_features]
-            else:
-                raise ValueError(
-                    "'output_features' {} is not a valid for this model. "
-                    "Available ones are: {}".format(output_features, set(self.output_features.keys()))
-                )
-        elif isinstance(output_features, list or set):
-            if output_features.issubset(self.output_features):
-                of_list = output_features
-            else:
-                raise ValueError(
-                    "'output_features' {} must be a subset of "
-                    "available features {}".format(output_features, set(self.output_features.keys()))
-                )
-        else:
-            raise ValueError("'output_features' must be None or a string or a list " "of output features")
-
+    def predictions(self, inputs):
         outputs = self(inputs)
-
         predictions = {}
-        for of_name in of_list:
-            predictions[of_name] = self.output_features[of_name].predictions(outputs, of_name)
+        for of_name in self.output_features:
+            original_feature_name = of_name.strip("__ludwig")
+            predictions[original_feature_name] = self.output_features[of_name].predictions(
+                outputs, original_feature_name
+            )
 
         return predictions
 
     def evaluation_step(self, inputs, targets):
-        predictions = self.predictions(inputs, output_features=None)
+        predictions = self.predictions(inputs)
         self.update_metrics(targets, predictions)
         return predictions
 
     def predict_step(self, inputs):
-        return self.predictions(inputs, output_features=None)
+        return self.predictions(inputs)
 
     def train_loss(
         self,
@@ -241,6 +193,7 @@ class ECD(LudwigModule):
         train_loss = 0
         of_train_losses = {}
         for of_name, of_obj in self.output_features.items():
+            of_name = of_name.strip("__ludwig")
             of_train_loss = of_obj.train_loss(targets[of_name], predictions, of_name)
             train_loss += of_obj.loss["weight"] * of_train_loss
             of_train_losses[of_name] = of_train_loss
@@ -258,6 +211,7 @@ class ECD(LudwigModule):
         eval_loss = 0
         of_eval_losses = {}
         for of_name, of_obj in self.output_features.items():
+            of_name = of_name.strip("__ludwig")
             of_eval_loss = of_obj.eval_loss(targets[of_name], predictions[of_name])
             eval_loss += of_obj.loss["weight"] * of_eval_loss
             of_eval_losses[of_name] = of_eval_loss
@@ -266,6 +220,7 @@ class ECD(LudwigModule):
 
     def update_metrics(self, targets, predictions):
         for of_name, of_obj in self.output_features.items():
+            of_name = of_name.strip("__ludwig")
             of_obj.update_metrics(targets[of_name], predictions[of_name])
 
         self.eval_loss_metric.update(self.eval_loss(targets, predictions)[0])
@@ -273,6 +228,7 @@ class ECD(LudwigModule):
     def get_metrics(self):
         all_of_metrics = {}
         for of_name, of_obj in self.output_features.items():
+            of_name = of_name.strip("__ludwig")
             all_of_metrics[of_name] = of_obj.get_metrics()
         all_of_metrics[COMBINED] = {LOSS: get_scalar_from_ludwig_metric(self.eval_loss_metric)}
         return all_of_metrics
@@ -306,7 +262,7 @@ def build_inputs(input_features_def: List[Dict[str, Any]]) -> Dict[str, InputFea
     input_features = OrderedDict()
     input_features_def = topological_sort_feature_dependencies(input_features_def)
     for input_feature_def in input_features_def:
-        input_features[input_feature_def[NAME]] = build_single_input(input_feature_def, input_features)
+        input_features[input_feature_def[NAME] + "__ludwig"] = build_single_input(input_feature_def, input_features)
     return input_features
 
 
@@ -338,7 +294,7 @@ def build_outputs(output_features_def: List[Dict[str, Any]], combiner: Combiner)
         # seq2seq.
         output_feature_def["input_size"] = combiner.output_shape[-1]
         output_feature = build_single_output(output_feature_def, output_features)
-        output_features[output_feature_def[NAME]] = output_feature
+        output_features[output_feature_def[NAME] + "__ludwig"] = output_feature
 
     return output_features
 

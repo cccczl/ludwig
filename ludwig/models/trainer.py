@@ -593,7 +593,7 @@ class Trainer(BaseTrainer):
         if self.validation_field == "combined":
             valid_validation_field = True
             if self.validation_metric is not LOSS and len(output_features) == 1:
-                only_of = next(iter(output_features))
+                only_of = next(iter(output_features)).strip("__ludwig")
                 if self.validation_metric in metrics_names[only_of]:
                     self._validation_field = only_of
                     logger.warning(
@@ -604,7 +604,7 @@ class Trainer(BaseTrainer):
                     )
         else:
             for output_feature in output_features:
-                if self.validation_field == output_feature:
+                if self.validation_field == output_feature.strip("__ludwig"):
                     valid_validation_field = True
 
         if not valid_validation_field:
@@ -833,8 +833,8 @@ class Trainer(BaseTrainer):
                 # init tables
                 tables = OrderedDict()
                 for output_feature_name, output_feature in output_features.items():
-                    original_feature_name = self.model.output_feature_original_name_map[output_feature_name]
-                    tables[original_feature_name] = [[original_feature_name] + metrics_names[output_feature_name]]
+                    output_feature_name = output_feature_name.strip("__ludwig")
+                    tables[output_feature_name] = [[output_feature_name] + metrics_names[output_feature_name]]
                 tables[COMBINED] = [[COMBINED, LOSS]]
 
                 # eval metrics on train
@@ -999,6 +999,7 @@ class Trainer(BaseTrainer):
 
     def append_metrics(self, dataset_name, results, metrics_log, tables):
         for output_feature in self.model.output_features:
+            original_feature_name = output_feature.strip("__ludwig")
             scores = [dataset_name]
 
             # collect metric names based on output features metrics to
@@ -1006,13 +1007,13 @@ class Trainer(BaseTrainer):
             metric_names = self.model.output_features[output_feature].metric_functions.keys()
 
             for metric in metric_names:
-                if metric in results[output_feature]:
+                if metric in results[original_feature_name]:
                     # Some metrics may have been excepted and excluded from results.
-                    score = results[output_feature][metric]
-                    metrics_log[output_feature][metric].append(score)
+                    score = results[original_feature_name][metric]
+                    metrics_log[original_feature_name][metric].append(score)
                     scores.append(score)
 
-            tables[self.model.output_feature_original_name_map[output_feature]].append(scores)
+            tables[original_feature_name].append(scores)
 
         metrics_log[COMBINED][LOSS].append(results[COMBINED][LOSS])
         tables[COMBINED].append([dataset_name, results[COMBINED][LOSS]])
@@ -1193,6 +1194,7 @@ class Trainer(BaseTrainer):
         test_metrics = OrderedDict()
 
         for output_feature_name, output_feature in output_features.items():
+            output_feature_name = output_feature_name.strip("__ludwig")
             train_metrics[output_feature_name] = OrderedDict()
             vali_metrics[output_feature_name] = OrderedDict()
             test_metrics[output_feature_name] = OrderedDict()
@@ -1209,6 +1211,7 @@ class Trainer(BaseTrainer):
     def get_metrics_names(self, output_features):
         metrics_names = {}
         for output_feature_name, output_feature in output_features.items():
+            output_feature_name = output_feature_name.strip("__ludwig")
             for metric in output_feature.metric_functions:
                 metrics = metrics_names.get(output_feature_name, [])
                 metrics.append(metric)

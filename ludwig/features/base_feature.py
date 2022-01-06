@@ -15,7 +15,7 @@
 import copy
 import logging
 from abc import ABC, abstractmethod, abstractstaticmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import torch
 from torch import Tensor
@@ -28,7 +28,7 @@ from ludwig.modules.fully_connected_modules import FCStack
 from ludwig.modules.loss_modules import get_loss_cls
 from ludwig.modules.metric_registry import get_metric_classes, get_metric_cls
 from ludwig.modules.reduction_modules import SequenceReducer
-from ludwig.utils import output_feature_utils
+from ludwig.utils import feature_utils, output_feature_utils
 from ludwig.utils.metric_utils import get_scalar_from_ludwig_metric
 from ludwig.utils.misc_utils import merge_dict
 from ludwig.utils.torch_utils import LudwigModule
@@ -198,7 +198,7 @@ class OutputFeature(BaseFeature, LudwigModule, ABC):
         logger.debug(" output feature fully connected layers")
         logger.debug("  FCStack")
 
-        self.input_size = self.get_input_size_with_dependencies(
+        self.input_size = feature_utils.get_input_size_with_dependencies(
             self.input_size, self.dependencies, other_output_features
         )
 
@@ -434,27 +434,6 @@ class OutputFeature(BaseFeature, LudwigModule, ABC):
     @abstractmethod
     def populate_defaults(input_feature):
         pass
-
-    def get_input_size_with_dependencies(
-        self, combiner_output_size: int, dependencies: List[str], other_output_features: Dict[str, "OutputFeature"]
-    ):
-        """Returns the input size for the first layer of this output feature's FC stack, accounting for
-        dependencies on other output features.
-
-        In the forward pass, the hidden states of any dependent output features get concatenated with the combiner's
-        output.
-
-        If this output feature depends on other output features, then the input size for this feature's FCStack is the
-        sum of the output sizes of other output features + the combiner's output size.
-        """
-        input_size_with_dependencies = combiner_output_size
-        for feature_name in dependencies:
-            if other_output_features[feature_name].num_fc_layers:
-                input_size_with_dependencies += other_output_features[feature_name].fc_stack.output_shape[-1]
-            else:
-                # 0-layer FCStack. Use the output feature's input size.
-                input_size_with_dependencies += other_output_features[feature_name].input_size
-        return input_size_with_dependencies
 
     def output_specific_fully_connected(self, inputs, mask=None):
         feature_hidden = inputs
