@@ -275,8 +275,9 @@ def build_single_input(
     encoder_obj = None
     if input_feature_def.get(TIED, None) is not None:
         tied_input_feature_name = input_feature_def[TIED]
-        if tied_input_feature_name in other_input_features:
-            encoder_obj = other_input_features[tied_input_feature_name].encoder_obj
+        suffixed_tied_input_feature_name = tied_input_feature_name + "__ludwig"
+        if suffixed_tied_input_feature_name in other_input_features:
+            encoder_obj = other_input_features[suffixed_tied_input_feature_name].encoder_obj
 
     input_feature_class = get_from_registry(input_feature_def[TYPE], input_type_registry)
     input_feature_obj = input_feature_class(input_feature_def, encoder_obj)
