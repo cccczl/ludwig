@@ -827,6 +827,9 @@ class LudwigModel:
         )
 
         logger.debug("Predicting")
+        for callback in self.callbacks:
+            callback.on_evaluation_start()
+
         with self.backend.create_predictor(self.model, batch_size=batch_size, debug=debug) as predictor:
             eval_stats, predictions = predictor.batch_evaluation(
                 dataset,
@@ -896,6 +899,9 @@ class LudwigModel:
                     self.model.output_features,
                     return_type=return_type,
                 )
+
+            for callback in self.callbacks:
+                callback.on_evaluation_end()
 
             return eval_stats, postproc_predictions, output_directory
 

@@ -119,6 +119,12 @@ class Callback(ABC):
     def on_build_data_end(self, df, mode):
         pass
 
+    def on_evaluation_start(self):
+        pass
+
+    def on_evaluation_end(self):
+        pass
+
     def on_visualize_figure(self, fig):
         pass
 
