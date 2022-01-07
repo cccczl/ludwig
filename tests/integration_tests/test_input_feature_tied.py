@@ -68,10 +68,16 @@ def test_tied_micro_level(input_feature_options):
 
     if input_feature_options.tie_features:
         # should be same encoder
-        assert input_features["input_feature_1"].encoder_obj is input_features["input_feature_2"].encoder_obj
+        assert (
+            input_features["input_feature_1__ludwig"].encoder_obj
+            is input_features["input_feature_2__ludwig"].encoder_obj
+        )
     else:
         # no tied parameter, encoders should be different
-        assert input_features["input_feature_1"].encoder_obj is not input_features["input_feature_2"].encoder_obj
+        assert (
+            input_features["input_feature_1__ludwig"].encoder_obj
+            is not input_features["input_feature_2__ludwig"].encoder_obj
+        )
 
 
 # TiedUseCase namedtuple structure:
