@@ -471,16 +471,16 @@ class LudwigModel:
 
             # init trainer
             with self.backend.create_trainer(
-                model=self.model,
-                **self.config[TRAINING],
-                resume=model_resume_path is not None,
-                skip_save_model=skip_save_model,
-                skip_save_progress=skip_save_progress,
-                skip_save_log=skip_save_log,
-                callbacks=train_callbacks,
-                random_seed=random_seed,
-                debug=debug,
-            ) as trainer:
+                        model=self.model,
+                        **self.config[TRAINING],
+                        resume=model_resume_path is not None,
+                        skip_save_model=skip_save_model,
+                        skip_save_progress=skip_save_progress,
+                        skip_save_log=skip_save_log,
+                        callbacks=train_callbacks,
+                        random_seed=random_seed,
+                        debug=debug,
+                    ) as trainer:
                 for callback in self.callbacks:
                     callback.on_train_start(
                         model=self.model,
@@ -493,15 +493,15 @@ class LudwigModel:
                     # TODO (ASN): add support for substitute_with_max parameter
                     tuned_batch_size = trainer.tune_batch_size(self.config, training_set, random_seed=random_seed)
 
-                    # TODO(travis): pass these in as args to trainer when we call train,
-                    #  to avoid setting state on possibly remote trainer
-                    if self.config[TRAINING][BATCH_SIZE] == AUTO:
-                        self.config[TRAINING][BATCH_SIZE] = tuned_batch_size
-                        trainer.batch_size = tuned_batch_size
+                # TODO(travis): pass these in as args to trainer when we call train,
+                #  to avoid setting state on possibly remote trainer
+                if self.config[TRAINING][BATCH_SIZE] == AUTO:
+                    self.config[TRAINING][BATCH_SIZE] = tuned_batch_size
+                    trainer.batch_size = tuned_batch_size
 
-                    if self.config[TRAINING][EVAL_BATCH_SIZE] == AUTO:
-                        self.config[TRAINING][EVAL_BATCH_SIZE] = tuned_batch_size
-                        trainer.eval_batch_size = tuned_batch_size
+                if self.config[TRAINING][EVAL_BATCH_SIZE] == AUTO:
+                    self.config[TRAINING][EVAL_BATCH_SIZE] = tuned_batch_size
+                    trainer.eval_batch_size = tuned_batch_size
 
                 # auto tune learning rate
                 if self.config[TRAINING][LEARNING_RATE] == AUTO:
@@ -531,9 +531,12 @@ class LudwigModel:
                     }
 
                     # save training statistics
-                    if self.backend.is_coordinator():
-                        if not skip_save_training_statistics and path_exists(os.path.dirname(training_stats_fn)):
-                            save_json(training_stats_fn, train_stats)
+                    if (
+                        self.backend.is_coordinator()
+                        and not skip_save_training_statistics
+                        and path_exists(os.path.dirname(training_stats_fn))
+                    ):
+                        save_json(training_stats_fn, train_stats)
 
                     # grab the results of the model with highest validation test performance
                     validation_field = trainer.validation_field
@@ -548,20 +551,18 @@ class LudwigModel:
                         )
                         logger.info(f"Best validation model epoch: {epoch_best_vali_metric + 1}")
                         logger.info(
-                            "Best validation model {} on validation set {}: {}".format(
-                                validation_metric, validation_field, best_vali_metric
-                            )
+                            f"Best validation model {validation_metric} on validation set {validation_field}: {best_vali_metric}"
                         )
+
                         if test_set is not None:
                             best_vali_metric_epoch_test_metric = train_testset_stats[validation_field][
                                 validation_metric
                             ][epoch_best_vali_metric]
 
                             logger.info(
-                                "Best validation model {} on test set {}: {}".format(
-                                    validation_metric, validation_field, best_vali_metric_epoch_test_metric
-                                )
+                                f"Best validation model {validation_metric} on test set {validation_field}: {best_vali_metric_epoch_test_metric}"
                             )
+
                         logger.info(f"\nFinished: {experiment_name}_{model_name}")
                         logger.info(f"Saved to: {output_directory}")
                 finally:
@@ -736,13 +737,12 @@ class LudwigModel:
                 postproc_predictions, self.model.output_features, return_type=return_type
             )
 
-            if self.backend.is_coordinator():
-                if not skip_save_predictions:
-                    save_prediction_outputs(
-                        postproc_predictions, self.model.output_features, output_directory, self.backend
-                    )
+            if self.backend.is_coordinator() and not skip_save_predictions:
+                save_prediction_outputs(
+                    postproc_predictions, self.model.output_features, output_directory, self.backend
+                )
 
-                    logger.info(f"Saved to: {output_directory}")
+                logger.info(f"Saved to: {output_directory}")
 
             return converted_postproc_predictions, output_directory
 
@@ -1068,10 +1068,10 @@ class LudwigModel:
             logger.warning(f"Eval split {eval_split} not supported. " f"Using validation set instead")
 
         if eval_set is not None:
-            if self.config[TRAINING]["eval_batch_size"]:
-                batch_size = self.config[TRAINING]["eval_batch_size"]
-            else:
-                batch_size = self.config[TRAINING]["batch_size"]
+            batch_size = (
+                self.config[TRAINING]["eval_batch_size"]
+                or self.config[TRAINING]["batch_size"]
+            )
 
             # predict
             try:
@@ -1112,8 +1112,7 @@ class LudwigModel:
         :return: (list) List of tensors
         """
         self._check_initialization()
-        collected_tensors = self.model.collect_weights(tensor_names)
-        return collected_tensors
+        return self.model.collect_weights(tensor_names)
 
     def collect_activations(
         self,
@@ -1167,12 +1166,10 @@ class LudwigModel:
 
         logger.debug("Predicting")
         with self.backend.create_predictor(self.model, batch_size=batch_size, debug=debug) as predictor:
-            activations = predictor.batch_collect_activations(
+            return predictor.batch_collect_activations(
                 layer_names,
                 dataset,
             )
-
-            return activations
 
     def preprocess(
         self,
@@ -1623,10 +1620,11 @@ def kfold_cross_validate(
             curr_train_df = data_df.iloc[train_indices]
             curr_test_df = data_df.iloc[test_indices]
 
-            kfold_split_indices["fold_" + str(fold_num)] = {
+            kfold_split_indices[f"fold_{str(fold_num)}"] = {
                 "training_indices": train_indices,
                 "test_indices": test_indices,
             }
+
 
             # train and validate model on this fold
             logger.info(f"training on fold {fold_num:d}")
@@ -1639,11 +1637,16 @@ def kfold_cross_validate(
                 gpu_memory_limit=gpu_memory_limit,
                 allow_parallel_threads=allow_parallel_threads,
             )
-            (eval_stats, train_stats, preprocessed_data, output_directory) = model.experiment(
+            (
+                eval_stats,
+                train_stats,
+                preprocessed_data,
+                output_directory,
+            ) = model.experiment(
                 training_set=curr_train_df,
                 test_set=curr_test_df,
                 experiment_name="cross_validation",
-                model_name="fold_" + str(fold_num),
+                model_name=f"fold_{str(fold_num)}",
                 skip_save_training_description=skip_save_training_description,
                 skip_save_training_statistics=skip_save_training_statistics,
                 skip_save_model=skip_save_model,
@@ -1659,12 +1662,13 @@ def kfold_cross_validate(
                 debug=debug,
             )
 
+
             # augment the training statistics with scoring metric from
             # the hold out fold
             train_stats["fold_eval_stats"] = eval_stats
 
             # collect training statistics for this fold
-            kfold_cv_stats["fold_" + str(fold_num)] = train_stats
+            kfold_cv_stats[f"fold_{str(fold_num)}"] = train_stats
 
     # consolidate raw fold metrics across all folds
     raw_kfold_stats = {}

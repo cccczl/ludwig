@@ -26,7 +26,7 @@ from tests.integration_tests.utils import category_feature, generate_data, seque
 
 def _run_commands(commands, **ludwig_kwargs):
     for arg_name, value in ludwig_kwargs.items():
-        commands += ["--" + arg_name, value]
+        commands += [f"--{arg_name}", value]
     cmdline = " ".join(commands)
     print(cmdline)
     completed_process = subprocess.run(cmdline, shell=True, stdout=subprocess.PIPE, env=os.environ.copy())

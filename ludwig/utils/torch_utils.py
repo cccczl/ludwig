@@ -25,8 +25,7 @@ def sequence_length_2D(sequence: torch.Tensor) -> torch.Tensor:
     :returns: (torch.Tensor) The count on non-zero elements per sequence.
     """
     used = (sequence != SpecialSymbol.PADDING.value).type(torch.int32)
-    length = torch.sum(used, 1)
-    return length
+    return torch.sum(used, 1)
 
 
 def sequence_length_3D(sequence: torch.Tensor) -> torch.Tensor:
@@ -58,8 +57,7 @@ def sequence_mask(lengths: torch.Tensor, maxlen: Optional[int] = None, dtype: to
     matrix = torch.unsqueeze(lengths, dim=-1)
     row_vector = torch.arange(0, maxlen, 1, device=lengths.device)
     mask = row_vector < matrix
-    mask = mask.type(dtype)
-    return mask
+    return mask.type(dtype)
 
 
 def periodic(inputs: torch.Tensor, period: int) -> torch.Tensor:
@@ -136,10 +134,7 @@ class LudwigModule(Module):
         return self.device_tensor.device
 
     def losses(self):
-        collected_losses = []
-        for loss_fn in self._callable_losses:
-            collected_losses.append(loss_fn())
-
+        collected_losses = [loss_fn() for loss_fn in self._callable_losses]
         for child in self.children():
             if isinstance(child, LudwigModule):
                 collected_losses.extend(child.losses())
@@ -147,9 +142,7 @@ class LudwigModule(Module):
                 for c in child.values():
                     if hasattr(c, "losses"):  # Some modules, i.e. SequenceReducers, don't have losses.
                         collected_losses.extend(c.losses())
-            elif isinstance(child, Module):
-                pass
-            else:
+            elif not isinstance(child, Module):
                 raise ValueError
 
         return collected_losses
@@ -209,8 +202,7 @@ class Dense(LudwigModule):
         return self.dense.input_shape
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
-        output = torch.squeeze(self.dense(input), dim=-1)
-        return output
+        return torch.squeeze(self.dense(input), dim=-1)
 
 
 # sparsemax implementation: https://github.com/dreamquark-ai/tabnet/blob/develop/pytorch_tabnet/sparsemax.py

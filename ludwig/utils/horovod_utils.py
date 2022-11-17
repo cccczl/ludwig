@@ -21,7 +21,7 @@ try:
     import horovod.torch
 
     _HVD = horovod.torch
-except (ModuleNotFoundError, ImportError):
+except ImportError:
     _HVD = None
 
 

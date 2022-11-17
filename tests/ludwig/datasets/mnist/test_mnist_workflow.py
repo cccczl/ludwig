@@ -15,35 +15,31 @@ class FakeMnistDataset(Mnist):
 def test_download_mnist_dataset():
     with tempfile.TemporaryDirectory() as source_dir:
         train_image_archive_filename = os.path.join(source_dir, "train-images-idx3-ubyte")
-        train_image_handle = open(train_image_archive_filename, "w+b")
-        train_image_handle.write(b"This binary string will be written as training mage data")
-        train_image_handle.close()
+        with open(train_image_archive_filename, "w+b") as train_image_handle:
+            train_image_handle.write(b"This binary string will be written as training mage data")
         with open(train_image_archive_filename, "rb") as f_in:
-            with gzip.open(train_image_archive_filename + ".gz", "wb") as f_out:
+            with gzip.open(f"{train_image_archive_filename}.gz", "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
         train_labels_archive_filename = os.path.join(source_dir, "train-labels-idx1-ubyte")
-        train_labels_handle = open(train_labels_archive_filename, "w")
-        train_labels_handle.write("0")
-        train_labels_handle.close()
+        with open(train_labels_archive_filename, "w") as train_labels_handle:
+            train_labels_handle.write("0")
         with open(train_labels_archive_filename, "rb") as f_in:
-            with gzip.open(train_labels_archive_filename + ".gz", "wb") as f_out:
+            with gzip.open(f"{train_labels_archive_filename}.gz", "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
         test_image_archive_filename = os.path.join(source_dir, "t10k-images-idx3-ubyte")
-        test_image_handle = open(test_image_archive_filename, "w+b")
-        test_image_handle.write(b"This binary string will be written as test mage data")
-        test_image_handle.close()
+        with open(test_image_archive_filename, "w+b") as test_image_handle:
+            test_image_handle.write(b"This binary string will be written as test mage data")
         with open(test_image_archive_filename, "rb") as f_in:
-            with gzip.open(test_image_archive_filename + ".gz", "wb") as f_out:
+            with gzip.open(f"{test_image_archive_filename}.gz", "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
         test_labels_archive_filename = os.path.join(source_dir, "t10k-labels-idx1-ubyte")
-        test_labels_handle = open(test_labels_archive_filename, "w")
-        test_labels_handle.write("0")
-        test_labels_handle.close()
+        with open(test_labels_archive_filename, "w") as test_labels_handle:
+            test_labels_handle.write("0")
         with open(test_labels_archive_filename, "rb") as f_in:
-            with gzip.open(test_labels_archive_filename + ".gz", "wb") as f_out:
+            with gzip.open(f"{test_labels_archive_filename}.gz", "wb") as f_out:
                 shutil.copyfileobj(f_in, f_out)
 
         extracted_filenames = [
@@ -54,11 +50,12 @@ def test_download_mnist_dataset():
         ]
 
         download_urls = [
-            "file://" + train_image_archive_filename + ".gz",
-            "file://" + train_labels_archive_filename + ".gz",
-            "file://" + test_image_archive_filename + ".gz",
-            "file://" + test_labels_archive_filename + ".gz",
+            f"file://{train_image_archive_filename}.gz",
+            f"file://{train_labels_archive_filename}.gz",
+            f"file://{test_image_archive_filename}.gz",
+            f"file://{test_labels_archive_filename}.gz",
         ]
+
 
         config = dict(
             version=1.0,

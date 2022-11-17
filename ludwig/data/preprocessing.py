@@ -157,7 +157,10 @@ class DictPreprocessor(DataFormatPreprocessor):
     ):
         num_overrides = override_in_memory_flag(features, True)
         if num_overrides > 0:
-            logger.warning("Using in_memory = False is not supported " "with {} data format.".format("dict"))
+            logger.warning(
+                'Using in_memory = False is not supported with dict data format.'
+            )
+
 
         df_engine = backend.df_engine
         if dataset is not None:
@@ -212,7 +215,10 @@ class DataFramePreprocessor(DataFormatPreprocessor):
     ):
         num_overrides = override_in_memory_flag(features, True)
         if num_overrides > 0:
-            logger.warning("Using in_memory = False is not supported " "with {} data format.".format("dataframe"))
+            logger.warning(
+                'Using in_memory = False is not supported with dataframe data format.'
+            )
+
 
         if isinstance(dataset, pd.DataFrame):
             dataset = backend.df_engine.from_pandas(dataset)
@@ -963,17 +969,16 @@ class HDF5Preprocessor(DataFormatPreprocessor):
 
         if DATA_TRAIN_HDF5_FP not in training_set_metadata:
             logger.warning(
-                "data_train_hdf5_fp not present in training_set_metadata. "
-                "Adding it with the current HDF5 file path {}".format(not_none_set)
+                f"data_train_hdf5_fp not present in training_set_metadata. Adding it with the current HDF5 file path {not_none_set}"
             )
+
             training_set_metadata[DATA_TRAIN_HDF5_FP] = not_none_set
 
         elif training_set_metadata[DATA_TRAIN_HDF5_FP] != not_none_set:
             logger.warning(
-                "data_train_hdf5_fp in training_set_metadata is {}, "
-                "different from the current HDF5 file path {}. "
-                "Replacing it".format(training_set_metadata[DATA_TRAIN_HDF5_FP], not_none_set)
+                f"data_train_hdf5_fp in training_set_metadata is {training_set_metadata[DATA_TRAIN_HDF5_FP]}, different from the current HDF5 file path {not_none_set}. Replacing it"
             )
+
             training_set_metadata[DATA_TRAIN_HDF5_FP] = not_none_set
 
         if dataset is not None:
@@ -1599,7 +1604,10 @@ def preprocess_for_prediction(
     if data_format not in HDF5_FORMATS:
         num_overrides = override_in_memory_flag(config["input_features"], True)
         if num_overrides > 0:
-            logger.warning("Using in_memory = False is not supported " "with {} data format.".format(data_format))
+            logger.warning(
+                f"Using in_memory = False is not supported with {data_format} data format."
+            )
+
 
     preprocessing_params = merge_dict(default_preprocessing_parameters, config[PREPROCESSING])
 
@@ -1691,7 +1699,10 @@ def replace_text_feature_level(features, datasets):
         if feature[TYPE] == TEXT:
             for dataset in datasets:
                 if dataset is not None:
-                    dataset[feature[PROC_COLUMN]] = dataset["{}_{}".format(feature[PROC_COLUMN], feature["level"])]
+                    dataset[feature[PROC_COLUMN]] = dataset[
+                        f'{feature[PROC_COLUMN]}_{feature["level"]}'
+                    ]
+
                     for level in ("word", "char"):
                         name_level = f"{feature[PROC_COLUMN]}_{level}"
                         if name_level in dataset:

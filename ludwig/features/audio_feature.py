@@ -284,10 +284,9 @@ class AudioFeatureMixin(BaseFeatureMixin):
             num_fft_points = audio_feature_dict["num_fft_points"]
             if num_fft_points < window_length_in_samp:
                 raise ValueError(
-                    "num_fft_points: {} < window length in "
-                    "samples: {} (corresponds to window length"
-                    " in s: {}".format(num_fft_points, window_length_in_s, window_length_in_samp)
+                    f"num_fft_points: {num_fft_points} < window length in samples: {window_length_in_s} (corresponds to window length in s: {window_length_in_samp}"
                 )
+
         else:
             num_fft_points = window_length_in_samp
 
@@ -382,10 +381,9 @@ class AudioFeatureMixin(BaseFeatureMixin):
 
         if not audio_length_limit_in_samp.is_integer():
             raise ValueError(
-                "Audio_file_length_limit has to be chosen "
-                "so that {} (in s) * {} (sampling rate in Hz) "
-                "is an integer.".format(audio_length_limit_in_s, sampling_rate_in_hz)
+                f"Audio_file_length_limit has to be chosen so that {audio_length_limit_in_s} (in s) * {sampling_rate_in_hz} (sampling rate in Hz) is an integer."
             )
+
         audio_length_limit_in_samp = int(audio_length_limit_in_samp)
 
         if feature_type == "raw":
@@ -417,9 +415,7 @@ class AudioInputFeature(AudioFeatureMixin, SequenceInputFeature):
         assert inputs.dtype == torch.float32
         assert len(inputs.shape) == 3, f"expected 3D shape, found: {inputs.shape}"
 
-        encoder_output = self.encoder_obj(inputs, mask=mask)
-
-        return encoder_output
+        return self.encoder_obj(inputs, mask=mask)
 
     @property
     def input_shape(self) -> torch.Size:

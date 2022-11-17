@@ -158,10 +158,7 @@ def read_jsonl(data_fp, df_lib):
 
 def read_excel(data_fp, df_lib):
     fp_split = os.path.splitext(data_fp)
-    if fp_split[1] == ".xls":
-        excel_engine = "xlrd"
-    else:
-        excel_engine = "openpyxl"
+    excel_engine = "xlrd" if fp_split[1] == ".xls" else "openpyxl"
     return df_lib.read_excel(data_fp, engine=excel_engine)
 
 
@@ -255,7 +252,7 @@ def chunk_dict(data, chunk_size=100):
     Source: https://stackoverflow.com/a/22878842
     """
     it = iter(data)
-    for i in range(0, len(data), chunk_size):
+    for _ in range(0, len(data), chunk_size):
         yield {k: data[k] for k in islice(it, chunk_size)}
 
 
@@ -295,17 +292,13 @@ def flatten_df(df, backend):
 
 def unflatten_df(df, column_shapes, backend):
     for c in df.columns:
-        shape = column_shapes.get(c)
-        if shape:
+        if shape := column_shapes.get(c):
             df[c] = backend.df_engine.map_objects(df[c], lambda x: np.array(x).reshape(shape))
     return df
 
 
 def to_numpy_dataset(df):
-    dataset = {}
-    for col in df.columns:
-        dataset[col] = np.stack(df[col].to_numpy())
-    return dataset
+    return {col: np.stack(df[col].to_numpy()) for col in df.columns}
 
 
 def from_numpy_dataset(dataset):
@@ -357,16 +350,17 @@ def save_object(object_fp, obj):
 def load_array(data_fp, dtype=float):
     list_num = []
     with open_file(data_fp, "r") as input_file:
-        for x in input_file:
-            list_num.append(dtype(x.strip()))
+        list_num.extend(dtype(x.strip()) for x in input_file)
     return np.array(list_num)
 
 
 def load_matrix(data_fp, dtype=float):
     list_num = []
     with open_file(data_fp, "r") as input_file:
-        for row in input_file:
-            list_num.append([dtype(elem) for elem in row.strip().split()])
+        list_num.extend(
+            [dtype(elem) for elem in row.strip().split()] for row in input_file
+        )
+
     return np.squeeze(np.array(list_num))
 
 
@@ -416,8 +410,7 @@ def load_glove(file_path: str, return_embedding_size: bool = False) -> Dict[str,
     with open_file(file_path, "r", encoding="utf-8") as f:
         found_line = False
         while not found_line:
-            line = f.readline()
-            if line:
+            if line := f.readline():
                 embedding_size = len(line.split()) - 1
                 found_line = True
 
@@ -437,13 +430,12 @@ def load_glove(file_path: str, return_embedding_size: bool = False) -> Dict[str,
                     embeddings[word] = embedding
                 except ValueError:
                     logger.warning(
-                        "Line {} in the GloVe file {} is malformed, " "skipping it".format(line_number, file_path)
+                        f"Line {line_number} in the GloVe file {file_path} is malformed, skipping it"
                     )
+
     logger.info(f"  {len(embeddings)} embeddings loaded")
 
-    if return_embedding_size:
-        return embeddings, embedding_size
-    return embeddings
+    return (embeddings, embedding_size) if return_embedding_size else embeddings
 
 
 def split_data(split, data):
@@ -471,13 +463,7 @@ def shuffle_dict_unison_inplace(np_dict, random_state=None):
     # shuffle up the list of lists according to previous fct
     shuffled_list = shuffle_unison_inplace(list_of_lists, random_state)
 
-    recon = {}
-    for ii in range(len(keys)):
-        dkey = keys[ii]
-        recon[dkey] = shuffled_list[ii]
-
-    # we've shuffled the dictionary in place!
-    return recon
+    return {keys[ii]: shuffled_list[ii] for ii in range(len(keys))}
 
 
 def split_dataset_ttv(dataset, split):
@@ -530,14 +516,13 @@ def load_from_file(file_name, field=None, dtype=int, ground_truth_split=2):
     if file_name.endswith(".hdf5") and field is not None:
         dataset = pd.read_hdf(file_name, key=HDF5_COLUMNS_KEY)
         column = dataset[field]
-        array = column[dataset[SPLIT] == ground_truth_split].values  # ground truth
+        return column[dataset[SPLIT] == ground_truth_split].values
     elif file_name.endswith(".npy"):
-        array = np.load(file_name)
+        return np.load(file_name)
     elif file_name.endswith(".csv"):
-        array = read_csv(file_name, header=None).values
+        return read_csv(file_name, header=None).values
     else:
-        array = load_matrix(file_name, dtype)
-    return array
+        return load_matrix(file_name, dtype)
 
 
 def replace_file_extension(file_path, extension):
@@ -592,10 +577,9 @@ def add_sequence_feature_column(df, col_name, seq_length):
 def override_in_memory_flag(input_features, override_value):
     num_overrides = 0
     for feature in input_features:
-        if PREPROCESSING in feature:
-            if "in_memory" in feature[PREPROCESSING]:
-                feature[PREPROCESSING]["in_memory"] = override_value
-                num_overrides += 1
+        if PREPROCESSING in feature and "in_memory" in feature[PREPROCESSING]:
+            feature[PREPROCESSING]["in_memory"] = override_value
+            num_overrides += 1
     return num_overrides
 
 
@@ -628,9 +612,7 @@ class NumpyEncoder(json.JSONEncoder):
 
 def generate_kfold_splits(data_df, num_folds, random_state):
     kf = KFold(n_splits=num_folds, shuffle=True, random_state=random_state)
-    fold_num = 0
-    for train_indices, test_indices in kf.split(data_df):
-        fold_num += 1
+    for fold_num, (train_indices, test_indices) in enumerate(kf.split(data_df), start=1):
         yield train_indices, test_indices, fold_num
 
 
@@ -707,7 +689,10 @@ def figure_data_format_dataset(dataset):
         elif dataset.endswith(".h5") or dataset.endswith(".hdf5"):
             return "hdf5"
         else:
-            raise ValueError("Dataset path string {} " "does not contain a valid extension".format(dataset))
+            raise ValueError(
+                f"Dataset path string {dataset} does not contain a valid extension"
+            )
+
     else:
         raise ValueError(f"Cannot figure out the format of dataset {dataset}")
 
@@ -723,14 +708,12 @@ def figure_data_format(dataset=None, training_set=None, validation_set=None, tes
             data_formats.append(figure_data_format_dataset(test_set))
         data_formats_set = set(data_formats)
         if len(data_formats_set) > 1:
-            error_message = "Datasets have different formats. Training: "
-            error_message += str(data_formats[0])
+            error_message = f"Datasets have different formats. Training: {str(data_formats[0])}"
+
             if validation_set:
-                error_message = ", Validation: "
-                error_message += str(data_formats[1])
+                error_message = f", Validation: {str(data_formats[1])}"
             if test_set:
-                error_message = ", Test: "
-                error_message += str(data_formats[-1])
+                error_message = f", Test: {str(data_formats[-1])}"
             raise ValueError(error_message)
         else:
             data_format = next(iter(data_formats_set))
@@ -744,10 +727,12 @@ def is_model_dir(path: str) -> bool:
     ts_metadata_fn = os.path.join(path, TRAIN_SET_METADATA_FILE_NAME)
     is_model_dir = False
     if os.path.isdir(path) and os.path.isfile(hyperparameters_fn) and os.path.isfile(ts_metadata_fn):
-        weights_files_count = 0
-        for file_name in os.listdir(path):
-            if file_name.startswith(MODEL_WEIGHTS_FILE_NAME):
-                weights_files_count += 1
+        weights_files_count = sum(
+            1
+            for file_name in os.listdir(path)
+            if file_name.startswith(MODEL_WEIGHTS_FILE_NAME)
+        )
+
         if weights_files_count >= 2:
             is_model_dir = True
     return is_model_dir
@@ -758,7 +743,9 @@ def ndarray2string(parm_array):
     if isinstance(parm_array, np.ndarray):
         return "__ndarray__" + json.dumps(parm_array.tolist())
     else:
-        raise ValueError("Argument must be numpy.ndarray.  Instead argument found to be " "{}".format(type(parm_array)))
+        raise ValueError(
+            f"Argument must be numpy.ndarray.  Instead argument found to be {type(parm_array)}"
+        )
 
 
 def string2ndarray(parm_string):

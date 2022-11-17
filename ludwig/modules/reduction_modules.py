@@ -89,8 +89,7 @@ class ReduceLast(torch.nn.Module):
         # todo: review for generality
         sequence_length = sequence_length_3D(inputs) - 1
         sequence_length[sequence_length < 0] = 0
-        gathered = inputs[torch.arange(batch_size), sequence_length.type(torch.int64)]
-        return gathered
+        return inputs[torch.arange(batch_size), sequence_length.type(torch.int64)]
 
 
 class ReduceSum(torch.nn.Module):

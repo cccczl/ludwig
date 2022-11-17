@@ -172,7 +172,7 @@ class RandomSampler(HyperoptSampler):
                     if value_type == bool:
                         value_str = str(value)
                         value_type = str2bool
-                    elif value_type == str or value_type == int or value_type == float:
+                    elif value_type in [str, int, float]:
                         value_str = str(value)
                     else:
                         value_str = json.dumps(value)
@@ -183,7 +183,7 @@ class RandomSampler(HyperoptSampler):
                 cat_params_values_types[param_name] = values_types
             if param_values[TYPE] == FLOAT:
                 param_values[TYPE] = "real"
-            if param_values[TYPE] == INT or param_values[TYPE] == "real":
+            if param_values[TYPE] in [INT, "real"]:
                 if SPACE not in param_values:
                     param_values[SPACE] = "linear"
                 param_values["range"] = (param_values["low"], param_values["high"])
@@ -241,12 +241,12 @@ class GridSampler(HyperoptSampler):
 
     def _get_grids(self):
         hp_params = sorted(self.search_space)
-        grids = [
+        return [
             dict(zip(hp_params, prod))
-            for prod in itertools.product(*(self.search_space[hp_name] for hp_name in hp_params))
+            for prod in itertools.product(
+                *(self.search_space[hp_name] for hp_name in hp_params)
+            )
         ]
-
-        return grids
 
     def sample(self) -> Dict[str, Any]:
         if self.sampled_so_far >= len(self.samples):
@@ -285,7 +285,7 @@ class PySOTSampler(HyperoptSampler):
                     if value_type == bool:
                         value_str = str(value)
                         value_type = str2bool
-                    elif value_type == str or value_type == int or value_type == float:
+                    elif value_type in [str, int, float]:
                         value_str = str(value)
                     else:
                         value_str = json.dumps(value)
@@ -296,7 +296,7 @@ class PySOTSampler(HyperoptSampler):
                 cat_params_values_types[param_name] = values_types
             if param_values[TYPE] == FLOAT:
                 param_values[TYPE] = "real"
-            if param_values[TYPE] == INT or param_values[TYPE] == "real":
+            if param_values[TYPE] in [INT, "real"]:
                 if SPACE not in param_values:
                     param_values[SPACE] = "linear"
                 param_values["range"] = (param_values["low"], param_values["high"])
@@ -389,9 +389,8 @@ class RayTuneSampler(HyperoptSampler):
             for arg in param_search_space_sig.parameters.values():
                 if arg.name in values:
                     param_search_input_args[arg.name] = values[arg.name]
-                else:
-                    if arg.default is arg.empty:
-                        raise ValueError(f"Parameter '{arg}' not defined for {param}")
+                elif arg.default is arg.empty:
+                    raise ValueError(f"Parameter '{arg}' not defined for {param}")
             config[param] = param_search_space(**param_search_input_args)
         return config, ctx
 

@@ -262,12 +262,7 @@ class TextInputFeature(TextFeatureMixin, SequenceInputFeature):
 
     def forward(self, inputs, mask=None):
         assert isinstance(inputs, torch.Tensor)
-        assert (
-            inputs.dtype == torch.int8
-            or inputs.dtype == torch.int16
-            or inputs.dtype == torch.int32
-            or inputs.dtype == torch.int64
-        )
+        assert inputs.dtype in [torch.int8, torch.int16, torch.int32, torch.int64]
         assert len(inputs.shape) == 2
 
         inputs_mask = torch.not_equal(inputs, SpecialSymbol.PADDING.value)
@@ -332,34 +327,34 @@ class TextOutputFeature(TextFeatureMixin, SequenceOutputFeature):
 
     @staticmethod
     def update_config_with_metadata(output_feature, feature_metadata, *args, **kwargs):
-        output_feature["vocab_size"] = feature_metadata["{}_vocab_size".format(output_feature["level"])]
-        output_feature["max_sequence_length"] = feature_metadata[
-            "{}_max_sequence_length".format(output_feature["level"])
+        output_feature["vocab_size"] = feature_metadata[
+            f'{output_feature["level"]}_vocab_size'
         ]
+
+        output_feature["max_sequence_length"] = feature_metadata[
+            f'{output_feature["level"]}_max_sequence_length'
+        ]
+
         if isinstance(output_feature[LOSS]["class_weights"], (list, tuple)):
             # [0, 0] for UNK and PAD
             output_feature[LOSS]["class_weights"] = [0, 0] + output_feature[LOSS]["class_weights"]
             if len(output_feature[LOSS]["class_weights"]) != output_feature["vocab_size"]:
                 raise ValueError(
-                    "The length of class_weights ({}) is not compatible with "
-                    "the number of classes ({})".format(
-                        len(output_feature[LOSS]["class_weights"]), output_feature["vocab_size"]
-                    )
+                    f'The length of class_weights ({len(output_feature[LOSS]["class_weights"])}) is not compatible with the number of classes ({output_feature["vocab_size"]})'
                 )
 
+
         if output_feature[LOSS]["class_similarities_temperature"] > 0:
-            if "class_similarities" in output_feature:
-                distances = output_feature["class_similarities"]
-                temperature = output_feature[LOSS]["class_similarities_temperature"]
-                for i in range(len(distances)):
-                    distances[i, :] = softmax(distances[i, :], temperature=temperature)
-                output_feature[LOSS]["class_similarities"] = distances
-            else:
+            if "class_similarities" not in output_feature:
                 raise ValueError(
-                    "class_similarities_temperature > 0,"
-                    "but no class similarities are provided "
-                    "for feature {}".format(output_feature[COLUMN])
+                    f"class_similarities_temperature > 0,but no class similarities are provided for feature {output_feature[COLUMN]}"
                 )
+
+            distances = output_feature["class_similarities"]
+            temperature = output_feature[LOSS]["class_similarities_temperature"]
+            for i in range(len(distances)):
+                distances[i, :] = softmax(distances[i, :], temperature=temperature)
+            output_feature[LOSS]["class_similarities"] = distances
 
     @staticmethod
     def calculate_overall_stats(
@@ -380,27 +375,23 @@ class TextOutputFeature(TextFeatureMixin, SequenceOutputFeature):
         level_idx2str = f"{self.level}_idx2str"
 
         predictions_col = f"{self.feature_name}_{PREDICTIONS}"
-        if predictions_col in result:
-            if level_idx2str in metadata:
+        if predictions_col in result and level_idx2str in metadata:
+            def idx2str(pred):
+                return [
+                    metadata[level_idx2str][token] if token < len(metadata[level_idx2str]) else UNKNOWN_SYMBOL
+                    for token in pred
+                ]
 
-                def idx2str(pred):
-                    return [
-                        metadata[level_idx2str][token] if token < len(metadata[level_idx2str]) else UNKNOWN_SYMBOL
-                        for token in pred
-                    ]
-
-                result[predictions_col] = backend.df_engine.map_objects(result[predictions_col], idx2str)
+            result[predictions_col] = backend.df_engine.map_objects(result[predictions_col], idx2str)
 
         last_preds_col = f"{self.feature_name}_{LAST_PREDICTIONS}"
-        if last_preds_col in result:
-            if level_idx2str in metadata:
+        if last_preds_col in result and level_idx2str in metadata:
+            def last_idx2str(last_pred):
+                if last_pred < len(metadata[level_idx2str]):
+                    return metadata[level_idx2str][last_pred]
+                return UNKNOWN_SYMBOL
 
-                def last_idx2str(last_pred):
-                    if last_pred < len(metadata[level_idx2str]):
-                        return metadata[level_idx2str][last_pred]
-                    return UNKNOWN_SYMBOL
-
-                result[last_preds_col] = backend.df_engine.map_objects(result[last_preds_col], last_idx2str)
+            result[last_preds_col] = backend.df_engine.map_objects(result[last_preds_col], last_idx2str)
 
         probs_col = f"{self.feature_name}_{PROBABILITIES}"
         prob_col = f"{self.feature_name}_{PROBABILITY}"

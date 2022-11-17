@@ -119,25 +119,17 @@ class CategoryInputFeature(CategoryFeatureMixin, InputFeature):
     def __init__(self, feature, encoder_obj=None):
         super().__init__(feature)
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs):
         assert isinstance(inputs, torch.Tensor)
-        assert (
-            inputs.dtype == torch.int8
-            or inputs.dtype == torch.int16
-            or inputs.dtype == torch.int32
-            or inputs.dtype == torch.int64
-        )
+        assert inputs.dtype in [torch.int8, torch.int16, torch.int32, torch.int64]
         assert len(inputs.shape) == 1 or (len(inputs.shape) == 2 and inputs.shape[1] == 1)
 
         if len(inputs.shape) == 1:
             inputs = inputs.unsqueeze(dim=1)
 
-        if inputs.dtype == torch.int8 or inputs.dtype == torch.int16:
+        if inputs.dtype in [torch.int8, torch.int16]:
             inputs = inputs.type(torch.int)
         encoder_output = self.encoder_obj(inputs)
 
@@ -222,104 +214,80 @@ class CategoryOutputFeature(CategoryFeatureMixin, OutputFeature):
         output_feature["num_classes"] = feature_metadata["vocab_size"]
         output_feature["top_k"] = min(output_feature["num_classes"], output_feature["top_k"])
 
-        if isinstance(output_feature[LOSS]["class_weights"], (list, tuple)):
-            if len(output_feature[LOSS]["class_weights"]) != output_feature["num_classes"]:
-                raise ValueError(
-                    "The length of class_weights ({}) is not compatible with "
-                    "the number of classes ({}) for feature {}. "
-                    "Check the metadata JSON file to see the classes "
-                    "and their order and consider there needs to be a weight "
-                    "for the <UNK> class too.".format(
-                        len(output_feature[LOSS]["class_weights"]),
-                        output_feature["num_classes"],
-                        output_feature[COLUMN],
-                    )
-                )
+        if (
+            isinstance(output_feature[LOSS]["class_weights"], (list, tuple))
+            and len(output_feature[LOSS]["class_weights"])
+            != output_feature["num_classes"]
+        ):
+            raise ValueError(
+                f'The length of class_weights ({len(output_feature[LOSS]["class_weights"])}) is not compatible with the number of classes ({output_feature["num_classes"]}) for feature {output_feature[COLUMN]}. Check the metadata JSON file to see the classes and their order and consider there needs to be a weight for the <UNK> class too.'
+            )
+
 
         if isinstance(output_feature[LOSS]["class_weights"], dict):
-            if feature_metadata["str2idx"].keys() != output_feature[LOSS]["class_weights"].keys():
+            if (
+                feature_metadata["str2idx"].keys()
+                != output_feature[LOSS]["class_weights"].keys()
+            ):
                 raise ValueError(
-                    "The class_weights keys ({}) are not compatible with "
-                    "the classes ({}) of feature {}. "
-                    "Check the metadata JSON file to see the classes "
-                    "and consider there needs to be a weight "
-                    "for the <UNK> class too.".format(
-                        output_feature[LOSS]["class_weights"].keys(),
-                        feature_metadata["str2idx"].keys(),
-                        output_feature[COLUMN],
-                    )
+                    f'The class_weights keys ({output_feature[LOSS]["class_weights"].keys()}) are not compatible with the classes ({feature_metadata["str2idx"].keys()}) of feature {output_feature[COLUMN]}. Check the metadata JSON file to see the classes and consider there needs to be a weight for the <UNK> class too.'
                 )
-            else:
-                class_weights = output_feature[LOSS]["class_weights"]
-                idx2str = feature_metadata["idx2str"]
-                class_weights_list = [class_weights[s] for s in idx2str]
-                output_feature[LOSS]["class_weights"] = class_weights_list
+
+            class_weights = output_feature[LOSS]["class_weights"]
+            idx2str = feature_metadata["idx2str"]
+            class_weights_list = [class_weights[s] for s in idx2str]
+            output_feature[LOSS]["class_weights"] = class_weights_list
 
         if output_feature[LOSS]["class_similarities_temperature"] > 0:
-            if "class_similarities" in output_feature[LOSS]:
-                similarities = output_feature[LOSS]["class_similarities"]
-                temperature = output_feature[LOSS]["class_similarities_temperature"]
-
-                curr_row = 0
-                first_row_length = 0
-                is_first_row = True
-                for row in similarities:
-                    if is_first_row:
-                        first_row_length = len(row)
-                        is_first_row = False
-                        curr_row += 1
-                    else:
-                        curr_row_length = len(row)
-                        if curr_row_length != first_row_length:
-                            raise ValueError(
-                                "The length of row {} of the class_similarities "
-                                "of {} is {}, different from the length of "
-                                "the first row {}. All rows must have "
-                                "the same length.".format(
-                                    curr_row, output_feature[COLUMN], curr_row_length, first_row_length
-                                )
-                            )
-                        else:
-                            curr_row += 1
-                all_rows_length = first_row_length
-
-                if all_rows_length != len(similarities):
-                    raise ValueError(
-                        "The class_similarities matrix of {} has "
-                        "{} rows and {} columns, "
-                        "their number must be identical.".format(
-                            output_feature[COLUMN], len(similarities), all_rows_length
-                        )
-                    )
-
-                if all_rows_length != output_feature["num_classes"]:
-                    raise ValueError(
-                        "The size of the class_similarities matrix of {} is "
-                        "{}, different from the number of classes ({}). "
-                        "Check the metadata JSON file to see the classes "
-                        "and their order and "
-                        "consider <UNK> class too.".format(
-                            output_feature[COLUMN], all_rows_length, output_feature["num_classes"]
-                        )
-                    )
-
-                similarities = np.array(similarities, dtype=np.float32)
-                for i in range(len(similarities)):
-                    similarities[i, :] = softmax(similarities[i, :], temperature=temperature)
-
-                output_feature[LOSS]["class_similarities"] = similarities
-            else:
+            if "class_similarities" not in output_feature[LOSS]:
                 raise ValueError(
-                    "class_similarities_temperature > 0, "
-                    "but no class_similarities are provided "
-                    "for feature {}".format(output_feature[COLUMN])
+                    f"class_similarities_temperature > 0, but no class_similarities are provided for feature {output_feature[COLUMN]}"
                 )
+
+            similarities = output_feature[LOSS]["class_similarities"]
+            temperature = output_feature[LOSS]["class_similarities_temperature"]
+
+            curr_row = 0
+            first_row_length = 0
+            is_first_row = True
+            for row in similarities:
+                if is_first_row:
+                    first_row_length = len(row)
+                    is_first_row = False
+                    curr_row += 1
+                else:
+                    curr_row_length = len(row)
+                    if curr_row_length != first_row_length:
+                        raise ValueError(
+                            f"The length of row {curr_row} of the class_similarities of {output_feature[COLUMN]} is {curr_row_length}, different from the length of the first row {first_row_length}. All rows must have the same length."
+                        )
+
+                    else:
+                        curr_row += 1
+            all_rows_length = first_row_length
+
+            if all_rows_length != len(similarities):
+                raise ValueError(
+                    f"The class_similarities matrix of {output_feature[COLUMN]} has {len(similarities)} rows and {all_rows_length} columns, their number must be identical."
+                )
+
+
+            if all_rows_length != output_feature["num_classes"]:
+                raise ValueError(
+                    f'The size of the class_similarities matrix of {output_feature[COLUMN]} is {all_rows_length}, different from the number of classes ({output_feature["num_classes"]}). Check the metadata JSON file to see the classes and their order and consider <UNK> class too.'
+                )
+
+
+            similarities = np.array(similarities, dtype=np.float32)
+            for i in range(len(similarities)):
+                similarities[i, :] = softmax(similarities[i, :], temperature=temperature)
+
+            output_feature[LOSS]["class_similarities"] = similarities
 
     @staticmethod
     def calculate_overall_stats(predictions, targets, train_set_metadata):
-        overall_stats = {}
         confusion_matrix = ConfusionMatrix(targets, predictions[PREDICTIONS], labels=train_set_metadata["idx2str"])
-        overall_stats["confusion_matrix"] = confusion_matrix.cm.tolist()
+        overall_stats = {"confusion_matrix": confusion_matrix.cm.tolist()}
         overall_stats["overall_stats"] = confusion_matrix.stats()
         overall_stats["per_class_stats"] = confusion_matrix.per_class_stats()
 
@@ -333,11 +301,10 @@ class CategoryOutputFeature(CategoryFeatureMixin, OutputFeature):
         backend,
     ):
         predictions_col = f"{self.feature_name}_{PREDICTIONS}"
-        if predictions_col in predictions:
-            if "idx2str" in metadata:
-                predictions[predictions_col] = backend.df_engine.map_objects(
-                    predictions[predictions_col], lambda pred: metadata["idx2str"][pred]
-                )
+        if predictions_col in predictions and "idx2str" in metadata:
+            predictions[predictions_col] = backend.df_engine.map_objects(
+                predictions[predictions_col], lambda pred: metadata["idx2str"][pred]
+            )
 
         probabilities_col = f"{self.feature_name}_{PROBABILITIES}"
         if probabilities_col in predictions:
@@ -358,11 +325,10 @@ class CategoryOutputFeature(CategoryFeatureMixin, OutputFeature):
                     )
 
         top_k_col = f"{self.feature_name}_predictions_top_k"
-        if top_k_col in predictions:
-            if "idx2str" in metadata:
-                predictions[top_k_col] = backend.df_engine.map_objects(
-                    predictions[top_k_col], lambda pred_top_k: [metadata["idx2str"][pred] for pred in pred_top_k]
-                )
+        if top_k_col in predictions and "idx2str" in metadata:
+            predictions[top_k_col] = backend.df_engine.map_objects(
+                predictions[top_k_col], lambda pred_top_k: [metadata["idx2str"][pred] for pred in pred_top_k]
+            )
 
         return predictions
 

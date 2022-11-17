@@ -59,40 +59,67 @@ def postprocess_for_neuropod(predicted, config):
         feature_name = output_feature[NAME]
         feature_type = output_feature[TYPE]
         if feature_type == BINARY:
-            postprocessed[feature_name + "_predictions"] = np.expand_dims(
+            postprocessed[f"{feature_name}_predictions"] = np.expand_dims(
                 predicted[feature_name][PREDICTIONS].astype("str"), 1
             )
-            postprocessed[feature_name + "_probability"] = np.expand_dims(
+
+            postprocessed[f"{feature_name}_probability"] = np.expand_dims(
                 predicted[feature_name][PROBABILITY].astype("float64"), 1
             )
-            postprocessed[feature_name + "_probabilities"] = predicted[feature_name][PROBABILITIES].astype("float64")
+
+            postprocessed[f"{feature_name}_probabilities"] = predicted[
+                feature_name
+            ][PROBABILITIES].astype("float64")
+
         elif feature_type == NUMERICAL:
-            postprocessed[feature_name + "_predictions"] = np.expand_dims(
+            postprocessed[f"{feature_name}_predictions"] = np.expand_dims(
                 predicted[feature_name][PREDICTIONS].astype("float64"), 1
             )
+
         elif feature_type == CATEGORY:
-            postprocessed[feature_name + "_predictions"] = np.expand_dims(
+            postprocessed[f"{feature_name}_predictions"] = np.expand_dims(
                 np.array(predicted[feature_name][PREDICTIONS], dtype="str"), 1
             )
-            postprocessed[feature_name + "_probability"] = np.expand_dims(
+
+            postprocessed[f"{feature_name}_probability"] = np.expand_dims(
                 predicted[feature_name][PROBABILITY].astype("float64"), 1
             )
-            postprocessed[feature_name + "_probabilities"] = predicted[feature_name][PROBABILITIES].astype("float64")
-        elif feature_type == SEQUENCE or feature_type == TEXT:
+
+            postprocessed[f"{feature_name}_probabilities"] = predicted[
+                feature_name
+            ][PROBABILITIES].astype("float64")
+
+        elif feature_type in [SEQUENCE, TEXT]:
             predictions = list(map(lambda x: " ".join(x), predicted[feature_name][PREDICTIONS]))
-            postprocessed[feature_name + "_predictions"] = np.expand_dims(np.array(predictions, dtype="str"), 1)
+            postprocessed[f"{feature_name}_predictions"] = np.expand_dims(
+                np.array(predictions, dtype="str"), 1
+            )
+
         elif feature_type == SET:
             predictions = list(map(lambda x: " ".join(x), predicted[feature_name][PREDICTIONS]))
-            postprocessed[feature_name + "_predictions"] = np.expand_dims(np.array(predictions, dtype="str"), 1)
+            postprocessed[f"{feature_name}_predictions"] = np.expand_dims(
+                np.array(predictions, dtype="str"), 1
+            )
+
             probability = list(map(lambda x: " ".join([str(e) for e in x]), predicted[feature_name]["probability"]))
-            postprocessed[feature_name + "_probability"] = np.expand_dims(np.array(probability, dtype="str"), 1)
-            postprocessed[feature_name + "_probabilities"] = predicted[feature_name][PROBABILITIES].astype("float64")
+            postprocessed[f"{feature_name}_probability"] = np.expand_dims(
+                np.array(probability, dtype="str"), 1
+            )
+
+            postprocessed[f"{feature_name}_probabilities"] = predicted[
+                feature_name
+            ][PROBABILITIES].astype("float64")
+
         elif feature_type == VECTOR:
-            postprocessed[feature_name + "_predictions"] = predicted[feature_name][PREDICTIONS].astype("float64")
+            postprocessed[f"{feature_name}_predictions"] = predicted[
+                feature_name
+            ][PREDICTIONS].astype("float64")
+
         else:
-            postprocessed[feature_name + "_predictions"] = np.expand_dims(
+            postprocessed[f"{feature_name}_predictions"] = np.expand_dims(
                 np.array(predicted[feature_name][PREDICTIONS], dtype="str"), 1
             )
+
     return postprocessed
 
 
@@ -118,18 +145,25 @@ def export_neuropod(
         },
         {"path": os.path.join(ludwig_model_path, "checkpoint"), "packaged_name": "checkpoint"},
     ]
-    for filename in os.listdir(ludwig_model_path):
-        if MODEL_WEIGHTS_FILE_NAME in filename:
-            data_paths.append({"path": os.path.join(ludwig_model_path, filename), "packaged_name": filename})
+    data_paths.extend(
+        {
+            "path": os.path.join(ludwig_model_path, filename),
+            "packaged_name": filename,
+        }
+        for filename in os.listdir(ludwig_model_path)
+        if MODEL_WEIGHTS_FILE_NAME in filename
+    )
 
     logger.debug(f"data_paths: {data_paths}")
 
     ludwig_config = load_json(os.path.join(ludwig_model_path, MODEL_HYPERPARAMETERS_FILE_NAME))
     training_set_metadata = load_json(os.path.join(ludwig_model_path, TRAIN_SET_METADATA_FILE_NAME))
 
-    input_spec = []
-    for feature in ludwig_config["input_features"]:
-        input_spec.append({NAME: feature[NAME], "dtype": "str", "shape": (None, 1)})
+    input_spec = [
+        {NAME: feature[NAME], "dtype": "str", "shape": (None, 1)}
+        for feature in ludwig_config["input_features"]
+    ]
+
     logger.debug(f"input_spec: {input_spec}")
 
     output_spec = []
@@ -137,33 +171,92 @@ def export_neuropod(
         feature_type = feature[TYPE]
         feature_name = feature[NAME]
         if feature_type == BINARY:
-            output_spec.append({"name": feature_name + "_predictions", "dtype": "str", "shape": (None, 1)})
-            output_spec.append({"name": feature_name + "_probability", "dtype": "float64", "shape": (None, 1)})
-            output_spec.append({"name": feature_name + "_probabilities", "dtype": "float64", "shape": (None, 2)})
+            output_spec.extend(
+                (
+                    {
+                        "name": f"{feature_name}_predictions",
+                        "dtype": "str",
+                        "shape": (None, 1),
+                    },
+                    {
+                        "name": f"{feature_name}_probability",
+                        "dtype": "float64",
+                        "shape": (None, 1),
+                    },
+                    {
+                        "name": f"{feature_name}_probabilities",
+                        "dtype": "float64",
+                        "shape": (None, 2),
+                    },
+                )
+            )
+
         elif feature_type == NUMERICAL:
-            output_spec.append({"name": feature_name + "_predictions", "dtype": "float64", "shape": (None, 1)})
+            output_spec.append(
+                {
+                    "name": f"{feature_name}_predictions",
+                    "dtype": "float64",
+                    "shape": (None, 1),
+                }
+            )
+
         elif feature_type == CATEGORY:
-            output_spec.append({"name": feature_name + "_predictions", "dtype": "str", "shape": (None, 1)})
-            output_spec.append({"name": feature_name + "_probability", "dtype": "float64", "shape": (None, 1)})
+            output_spec.extend(
+                (
+                    {
+                        "name": f"{feature_name}_predictions",
+                        "dtype": "str",
+                        "shape": (None, 1),
+                    },
+                    {
+                        "name": f"{feature_name}_probability",
+                        "dtype": "float64",
+                        "shape": (None, 1),
+                    },
+                    {
+                        "name": f"{feature_name}_probabilities",
+                        "dtype": "float64",
+                        "shape": (
+                            None,
+                            training_set_metadata[feature[NAME]]["vocab_size"],
+                        ),
+                    },
+                )
+            )
+
+        elif feature_type in [SEQUENCE, TEXT]:
             output_spec.append(
                 {
-                    "name": feature_name + "_probabilities",
-                    "dtype": "float64",
-                    "shape": (None, training_set_metadata[feature[NAME]]["vocab_size"]),
+                    "name": f"{feature_name}_predictions",
+                    "dtype": "str",
+                    "shape": (None, 1),
                 }
             )
-        elif feature_type == SEQUENCE or feature_type == TEXT:
-            output_spec.append({"name": feature_name + "_predictions", "dtype": "str", "shape": (None, 1)})
+
         elif feature_type == SET:
-            output_spec.append({"name": feature_name + "_predictions", "dtype": "str", "shape": (None, 1)})
-            output_spec.append({"name": feature_name + "_probability", "dtype": "str", "shape": (None, 1)})
-            output_spec.append(
-                {
-                    "name": feature_name + "_probabilities",
-                    "dtype": "float64",
-                    "shape": (None, training_set_metadata[feature[NAME]]["vocab_size"]),
-                }
+            output_spec.extend(
+                (
+                    {
+                        "name": f"{feature_name}_predictions",
+                        "dtype": "str",
+                        "shape": (None, 1),
+                    },
+                    {
+                        "name": f"{feature_name}_probability",
+                        "dtype": "str",
+                        "shape": (None, 1),
+                    },
+                    {
+                        "name": f"{feature_name}_probabilities",
+                        "dtype": "float64",
+                        "shape": (
+                            None,
+                            training_set_metadata[feature[NAME]]["vocab_size"],
+                        ),
+                    },
+                )
             )
+
         elif feature_type == VECTOR:
             output_spec.append(
                 {

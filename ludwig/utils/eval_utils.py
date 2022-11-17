@@ -32,7 +32,7 @@ class ConfusionMatrix:
 
         if labels is not None:
             self.label2idx = {label: idx for idx, label in enumerate(labels)}
-            self.idx2label = {idx: label for idx, label in enumerate(labels)}
+            self.idx2label = dict(enumerate(labels))
             labels = list(range(len(labels)))
         else:
             self.label2idx = {
@@ -77,34 +77,22 @@ class ConfusionMatrix:
     def true_positive_rate(self, idx):
         nom = self.true_positives(idx)
         den = self.sum_conditions[idx]
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def true_negative_rate(self, idx):
         nom = tn = self.true_negatives(idx)
         den = tn + self.false_positives(idx)
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def positive_predictive_value(self, idx):
         nom = self.true_positives(idx)
         den = self.sum_predictions[idx]
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def negative_predictive_value(self, idx):
         nom = tn = self.true_negatives(idx)
         den = tn + self.false_negatives(idx)
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def false_negative_rate(self, idx):
         return 1.0 - self.true_positive_rate(idx)
@@ -121,10 +109,7 @@ class ConfusionMatrix:
     def accuracy(self, idx):
         nom = self.true_positives(idx) + self.true_negatives(idx)
         den = self.all
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def precision(self, idx):
         return self.positive_predictive_value(idx)
@@ -138,10 +123,7 @@ class ConfusionMatrix:
         recall = self.recall(idx)
         nom = (1 + beta_2) * precision * recall
         den = (beta_2 * precision) + recall
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def f1_score(self, idx):
         return self.fbeta_score(1, idx)
@@ -168,10 +150,7 @@ class ConfusionMatrix:
         fn = self.false_negatives(idx)
         nom = tp * tn - fp * fn
         den = np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
-        if den == 0 or den == np.nan:
-            return 0
-        else:
-            return nom / den
+        return 0 if den in [0, np.nan] else nom / den
 
     def informedness(self, idx):
         return self.true_positive_rate(idx) + self.true_negative_rate(idx) - 1

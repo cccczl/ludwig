@@ -103,9 +103,9 @@ class VectorFeatureMixin:
         if "vector_size" in preprocessing_parameters:
             if vector_size != preprocessing_parameters["vector_size"]:
                 raise ValueError(
-                    "The user provided value for vector size ({}) does not "
-                    "match the value observed in the data: {}".format(preprocessing_parameters, vector_size)
+                    f"The user provided value for vector size ({preprocessing_parameters}) does not match the value observed in the data: {vector_size}"
                 )
+
         else:
             logger.debug(f"Observed vector size: {vector_size}")
 
@@ -121,19 +121,14 @@ class VectorInputFeature(VectorFeatureMixin, InputFeature):
         super().__init__(feature)
         self.overwrite_defaults(feature)
         feature["input_size"] = feature["vector_size"]
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         assert isinstance(inputs, torch.Tensor)
         assert inputs.dtype in [torch.float32, torch.float64]
         assert len(inputs.shape) == 2
 
-        inputs_encoded = self.encoder_obj(inputs)
-
-        return inputs_encoded
+        return self.encoder_obj(inputs)
 
     @property
     def input_shape(self) -> torch.Size:

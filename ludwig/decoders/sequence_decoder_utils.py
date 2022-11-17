@@ -86,22 +86,21 @@ def get_lstm_init_state(
         if not isinstance(encoder_output_state, tuple):
             decoder_hidden_state = encoder_output_state
             decoder_cell_state = decoder_hidden_state
+        elif len(encoder_output_state) == 2:
+            # The encoder was probably an LSTM.
+            decoder_hidden_state, decoder_cell_state = encoder_output_state
+        elif len(encoder_output_state) == 4:
+            # The encoder was probably a bi-LSTM.
+            # Use the average of the encoder's hidden states for hidden state.
+            # Use the average of the encoder's cell states for cell state.
+            decoder_hidden_state = torch.mean([encoder_output_state[0], encoder_output_state[2]])
+            decoder_cell_state = torch.mean([encoder_output_state[1], encoder_output_state[3]])
         else:
-            if len(encoder_output_state) == 2:
-                # The encoder was probably an LSTM.
-                decoder_hidden_state, decoder_cell_state = encoder_output_state
-            elif len(encoder_output_state) == 4:
-                # The encoder was probably a bi-LSTM.
-                # Use the average of the encoder's hidden states for hidden state.
-                # Use the average of the encoder's cell states for cell state.
-                decoder_hidden_state = torch.mean([encoder_output_state[0], encoder_output_state[2]])
-                decoder_cell_state = torch.mean([encoder_output_state[1], encoder_output_state[3]])
-            else:
-                raise ValueError(
-                    f"Invalid sequence decoder inputs with keys: {combiner_outputs.keys()} with extracted encoder "
-                    + f"state: {encoder_output_state} that was invalid. Please double check the compatibility of your "
-                    + "encoder and decoder."
-                )
+            raise ValueError(
+                f"Invalid sequence decoder inputs with keys: {combiner_outputs.keys()} with extracted encoder "
+                + f"state: {encoder_output_state} that was invalid. Please double check the compatibility of your "
+                + "encoder and decoder."
+            )
 
     # Check rank and reduce if necessary.
     if len(decoder_hidden_state.size()) > 3 or len(decoder_cell_state.size()) > 3:

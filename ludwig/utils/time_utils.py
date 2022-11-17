@@ -86,7 +86,7 @@ def strdelta(tdelta):
     d = {"D": tdelta.days}
     d["H"], rem = divmod(tdelta.seconds, 3600)
     d["M"], d["S"] = divmod(rem, 60)
-    d["f"] = str(tdelta.microseconds)[0:4]
+    d["f"] = str(tdelta.microseconds)[:4]
     if d["D"] > 0:
         t = "{D}d {H}h {M}m {S}.{f}s"
     elif d["H"] > 0:

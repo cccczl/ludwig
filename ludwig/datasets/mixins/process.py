@@ -44,7 +44,7 @@ class MultifileJoinProcessMixin:
             file_df = pd.read_json(os.path.join(self.raw_dataset_path, filename), lines=True)
         elif filetype == "tsv":
             file_df = pd.read_table(os.path.join(self.raw_dataset_path, filename))
-        elif filetype == "csv" or filetype == "data":
+        elif filetype in ["csv", "data"]:
             file_df = pd.read_csv(os.path.join(self.raw_dataset_path, filename), header=header)
         else:
             raise ValueError(f"Unsupported file type: {filetype}")

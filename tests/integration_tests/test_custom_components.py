@@ -46,9 +46,7 @@ class CustomTestCombiner(Combiner):
         # minimal transformation from inputs to outputs
         encoder_outputs = [inputs[k]["encoder_output"] for k in inputs]
         hidden = torch.cat(encoder_outputs, 1)
-        return_data = {"combiner_output": hidden}
-
-        return return_data
+        return {"combiner_output": hidden}
 
     @staticmethod
     def get_schema_cls():

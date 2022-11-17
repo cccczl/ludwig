@@ -63,7 +63,7 @@ def test_grid_strategy(key):
         for param in actual_params_keys:
             value = sample[param]
             param_type = grid_sampler_params[param]["type"]
-            if param_type == "int" or param_type == "float":
+            if param_type in ["int", "float"]:
                 low = grid_sampler_params[param]["low"]
                 high = grid_sampler_params[param]["high"]
                 assert value >= low and value <= high
@@ -91,7 +91,7 @@ def test_random_sampler(key):
         for param in actual_params_keys:
             value = sample[param]
             param_type = random_sampler_params[param]["type"]
-            if param_type == "int" or param_type == "float":
+            if param_type in ["int", "float"]:
                 low = random_sampler_params[param]["low"]
                 high = random_sampler_params[param]["high"]
                 assert value >= low and value <= high
@@ -121,7 +121,7 @@ def test_pysot_sampler(key):
         for param in actual_params_keys:
             value = sample[param]
             param_type = pysot_sampler_params[param]["type"]
-            if param_type == "int" or param_type == "float":
+            if param_type in ["int", "float"]:
                 low = pysot_sampler_params[param]["low"]
                 high = pysot_sampler_params[param]["high"]
                 assert value >= low and value <= high

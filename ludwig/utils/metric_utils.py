@@ -29,10 +29,10 @@ def dynamic_partition(data: Tensor, partitions: Tensor, num_partitions: int) -> 
     # Flatten data into 1D vectors to do partitioning correctly.
     data = data.view(-1)
     partitions = partitions.view(-1)
-    result = []
-    for i in range(num_partitions):
-        result += [data[(partitions == i).nonzero().squeeze(1)]]
-    return result
+    return [
+        data[(partitions == i).nonzero().squeeze(1)]
+        for i in range(num_partitions)
+    ]
 
 
 def masked_correct_predictions(targets: Tensor, preds: Tensor, targets_sequence_lengths: Tensor) -> Tensor:

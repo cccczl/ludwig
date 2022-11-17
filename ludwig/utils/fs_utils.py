@@ -38,14 +38,12 @@ def has_remote_protocol(url):
 
 def is_http(urlpath):
     protocol, _ = split_protocol(urlpath)
-    return protocol == "http" or protocol == "https"
+    return protocol in ["http", "https"]
 
 
 def upgrade_http(urlpath):
     protocol, url = split_protocol(urlpath)
-    if protocol == "http":
-        return "https://" + url
-    return None
+    return f"https://{url}" if protocol == "http" else None
 
 
 def find_non_existing_dir_by_adding_suffix(directory_name):
@@ -53,7 +51,7 @@ def find_non_existing_dir_by_adding_suffix(directory_name):
     suffix = 0
     curr_directory_name = directory_name
     while fs.exists(curr_directory_name):
-        curr_directory_name = directory_name + "_" + str(suffix)
+        curr_directory_name = f"{directory_name}_{str(suffix)}"
         suffix += 1
     return curr_directory_name
 
@@ -110,7 +108,7 @@ def upload_output_directory(url):
         with tempfile.TemporaryDirectory() as tmpdir:
             fs, remote_path = get_fs_and_path(url)
             if path_exists(url):
-                fs.get(url, tmpdir + "/", recursive=True)
+                fs.get(url, f"{tmpdir}/", recursive=True)
 
             def put_fn():
                 fs.put(tmpdir, remote_path, recursive=True)
@@ -143,10 +141,7 @@ def download_h5(url):
 @contextlib.contextmanager
 def upload_h5(url):
     with upload_output_file(url) as local_fname:
-        mode = "w"
-        if url == local_fname and path_exists(url):
-            mode = "r+"
-
+        mode = "r+" if url == local_fname and path_exists(url) else "w"
         with h5py.File(local_fname, mode) as f:
             yield f
 

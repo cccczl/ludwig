@@ -131,9 +131,9 @@ punctuation = {".", ",", "@", "$", "%", "/", ":", ";", "+", "="}
 def load_nlp_pipeline(language="xx"):
     if language not in language_module_registry:
         logger.error(
-            "Language {} is not supported."
-            "Suported languages are: {}".format(language, language_module_registry.keys())
+            f"Language {language} is not supported.Suported languages are: {language_module_registry.keys()}"
         )
+
         raise ValueError
     else:
         spacy_module_name = language_module_registry[language]
@@ -165,9 +165,7 @@ def load_nlp_pipeline(language="xx"):
 def pass_filters(
     token, filter_numbers=False, filter_punctuation=False, filter_short_tokens=False, filter_stopwords=False
 ):
-    passes_filters = True
-    if filter_numbers:
-        passes_filters = not token.like_num
+    passes_filters = not token.like_num if filter_numbers else True
     if passes_filters and filter_punctuation:
         passes_filters = not bool(set(token.orth_) & punctuation)
     if passes_filters and filter_short_tokens:

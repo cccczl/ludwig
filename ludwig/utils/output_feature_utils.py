@@ -9,7 +9,7 @@ from ludwig.utils.torch_utils import sequence_length_3D, sequence_mask
 
 
 def get_feature_concat_name(feature_name: str, tensor_name: str) -> str:
-    return feature_name + "::" + tensor_name
+    return f"{feature_name}::{tensor_name}"
 
 
 def get_tensor_name_from_concat_name(concat_name: str) -> str:
@@ -24,11 +24,11 @@ def get_single_output_feature_tensors(
     output_feature_dict: Dict[str, torch.Tensor], feature_name: str
 ) -> Dict[str, torch.Tensor]:
     """Returns a map of tensors related to the given feature_name."""
-    single_output_feature_tensors = {}
-    for concat_name, tensor in output_feature_dict.items():
-        if get_feature_name_from_concat_name(concat_name) == feature_name:
-            single_output_feature_tensors[get_tensor_name_from_concat_name(concat_name)] = tensor
-    return single_output_feature_tensors
+    return {
+        get_tensor_name_from_concat_name(concat_name): tensor
+        for concat_name, tensor in output_feature_dict.items()
+        if get_feature_name_from_concat_name(concat_name) == feature_name
+    }
 
 
 def get_output_feature_tensor(
@@ -91,17 +91,15 @@ def concat_dependencies(
 
                 dependency_hidden_states.append(tiled_representation)
 
+        elif len(feature_hidden_state.shape) > 2:
+            # The dependent feature is sequential.
+            # vector matrix -> reduce concat
+            reducer = dependency_reducers[feature_name]
+            dependency_hidden_states.append(reducer(feature_hidden_state))
         else:
-            # This feature is not sequential.
-            if len(feature_hidden_state.shape) > 2:
-                # The dependent feature is sequential.
-                # vector matrix -> reduce concat
-                reducer = dependency_reducers[feature_name]
-                dependency_hidden_states.append(reducer(feature_hidden_state))
-            else:
-                # The dependent feature is not sequential.
-                # vector vector -> concat
-                dependency_hidden_states.append(feature_hidden_state)
+            # The dependent feature is not sequential.
+            # vector vector -> concat
+            dependency_hidden_states.append(feature_hidden_state)
 
     try:
         hidden = torch.cat([combiner_hidden_state] + dependency_hidden_states, dim=-1)

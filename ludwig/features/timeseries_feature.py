@@ -103,7 +103,7 @@ class TimeseriesFeatureMixin(BaseFeatureMixin):
 
     @staticmethod
     def feature_data(column, metadata, preprocessing_parameters, backend):
-        timeseries_data = TimeseriesFeatureMixin.build_matrix(
+        return TimeseriesFeatureMixin.build_matrix(
             column,
             preprocessing_parameters["tokenizer"],
             metadata["max_timeseries_length"],
@@ -111,7 +111,6 @@ class TimeseriesFeatureMixin(BaseFeatureMixin):
             preprocessing_parameters["padding"],
             backend,
         )
-        return timeseries_data
 
     @staticmethod
     def add_feature_data(
@@ -144,9 +143,7 @@ class TimeseriesInputFeature(TimeseriesFeatureMixin, SequenceInputFeature):
         assert len(inputs.shape) == 2
 
         inputs_exp = inputs.type(torch.float32)
-        encoder_output = self.encoder_obj(inputs_exp, mask=mask)
-
-        return encoder_output
+        return self.encoder_obj(inputs_exp, mask=mask)
 
     @property
     def input_shape(self) -> torch.Size:

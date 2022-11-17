@@ -121,9 +121,9 @@ def split(data_parquet):
     validation_df = data_df.drop(train_df.index).drop(test_df.index)
 
     basename, ext = os.path.splitext(data_parquet)
-    train_fname = basename + ".train" + ext
-    val_fname = basename + ".validation" + ext
-    test_fname = basename + ".test" + ext
+    train_fname = f"{basename}.train{ext}"
+    val_fname = f"{basename}.validation{ext}"
+    test_fname = f"{basename}.test{ext}"
 
     train_df.to_parquet(train_fname)
     validation_df.to_parquet(val_fname)

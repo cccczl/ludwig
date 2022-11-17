@@ -126,8 +126,7 @@ def _read_image_buffer(v):
     # read bytes sent via REST API and convert to image tensor
     # in [channels, height, width] format
     byte_string = io.BytesIO(v.file.read()).read()
-    image = decode_image(torch.frombuffer(byte_string, dtype=torch.uint8))
-    return image  # channels, height, width
+    return decode_image(torch.frombuffer(byte_string, dtype=torch.uint8))
 
 
 def convert_input(form, input_features):
@@ -149,11 +148,10 @@ def convert_input(form, input_features):
 
 def convert_batch_input(form, input_features):
     """Returns a new input and a list of files to be cleaned up."""
-    file_index = {}
     files = []
-    for k, v in form.multi_items():
-        if type(v) == UploadFile:
-            file_index[v.filename] = v
+    file_index = {
+        v.filename: v for k, v in form.multi_items() if type(v) == UploadFile
+    }
 
     data = json.loads(form["dataset"])
     for row in data["data"]:

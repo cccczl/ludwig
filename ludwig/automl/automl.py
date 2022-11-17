@@ -197,7 +197,12 @@ def _model_select(
     Note: Current implementation returns tabnet by default.
     """
 
-    dataset_info = get_dataset_info(dataset) if not isinstance(dataset, DatasetInfo) else dataset
+    dataset_info = (
+        dataset
+        if isinstance(dataset, DatasetInfo)
+        else get_dataset_info(dataset)
+    )
+
     fields = dataset_info.fields
 
     base_config = default_configs["base_config"]
@@ -207,10 +212,9 @@ def _model_select(
         base_config = merge_dict(base_config, default_configs["combiner"]["tabnet"])
 
         # override combiner heuristic if explicitly provided by user
-        if user_config is not None:
-            if "combiner" in user_config.keys():
-                model_type = user_config["combiner"]["type"]
-                base_config = merge_dict(base_config, default_configs["combiner"][model_type])
+        if user_config is not None and "combiner" in user_config.keys():
+            model_type = user_config["combiner"]["type"]
+            base_config = merge_dict(base_config, default_configs["combiner"][model_type])
     else:
         # text heuristics
         for input_feature in base_config["input_features"]:
@@ -231,9 +235,11 @@ def _model_select(
         hyperopt_params = copy.deepcopy(base_config["hyperopt"]["parameters"])
         for hyperopt_params in hyperopt_params.keys():
             config_section, param = hyperopt_params.split(".")[0], hyperopt_params.split(".")[1]
-            if config_section in user_config.keys():
-                if param in user_config[config_section]:
-                    del base_config["hyperopt"]["parameters"][hyperopt_params]
+            if (
+                config_section in user_config.keys()
+                and param in user_config[config_section]
+            ):
+                del base_config["hyperopt"]["parameters"][hyperopt_params]
 
     # add as initial trial in the automl search the hyperparameter settings from
     # the best model for a similar dataset and matching model type, if any.
@@ -252,7 +258,7 @@ def _train(
     random_seed: int,
     **kwargs,
 ):
-    hyperopt_results = hyperopt(
+    return hyperopt(
         config,
         dataset=dataset,
         output_directory=output_directory,
@@ -261,7 +267,6 @@ def _train(
         backend="local",
         **kwargs,
     )
-    return hyperopt_results
 
 
 def init_config(

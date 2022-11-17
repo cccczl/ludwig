@@ -59,7 +59,7 @@ class BaseFeatureMixin(ABC):
         raise NotImplementedError
 
     @abstractstaticmethod
-    def cast_column(column: DataFrame, backend) -> DataFrame:
+    def cast_column(self, backend) -> DataFrame:
         """Returns a copy of the dataset column for the given feature, potentially after a type cast.
 
         Args:
@@ -69,7 +69,7 @@ class BaseFeatureMixin(ABC):
         raise NotImplementedError
 
     @abstractstaticmethod
-    def get_feature_meta(column: DataFrame, preprocessing_parameters: Dict[str, Any], backend) -> Dict[str, Any]:
+    def get_feature_meta(self, preprocessing_parameters: Dict[str, Any], backend) -> Dict[str, Any]:
         """Returns a dictionary of feature metadata.
 
         Args:
@@ -80,15 +80,7 @@ class BaseFeatureMixin(ABC):
         raise NotImplementedError
 
     @abstractstaticmethod
-    def add_feature_data(
-        feature_config: Dict[str, Any],
-        input_df: DataFrame,
-        proc_df: Dict[str, DataFrame],
-        metadata: Dict[str, Any],
-        preprocessing_parameters: Dict[str, Any],
-        backend,  # Union[Backend, str]
-        skip_save_processed_input: bool,
-    ) -> None:
+    def add_feature_data(self, input_df: DataFrame, proc_df: Dict[str, DataFrame], metadata: Dict[str, Any], preprocessing_parameters: Dict[str, Any], backend, skip_save_processed_input: bool) -> None:
         """Runs preprocessing on the input_df and stores results in the proc_df and metadata dictionaries.
 
         Args:
@@ -447,14 +439,12 @@ class OutputFeature(BaseFeature, LudwigModule, ABC):
         If this output feature depends on other output features, then the input size for this feature's FCStack is the
         sum of the output sizes of other output features + the combiner's output size.
         """
-        input_size_with_dependencies = combiner_output_size
-        for feature_name in dependencies:
-            if other_output_features[feature_name].num_fc_layers:
-                input_size_with_dependencies += other_output_features[feature_name].fc_stack.output_shape[-1]
-            else:
-                # 0-layer FCStack. Use the output feature's input size.
-                input_size_with_dependencies += other_output_features[feature_name].input_size
-        return input_size_with_dependencies
+        return combiner_output_size + sum(
+            other_output_features[feature_name].fc_stack.output_shape[-1]
+            if other_output_features[feature_name].num_fc_layers
+            else other_output_features[feature_name].input_size
+            for feature_name in dependencies
+        )
 
     def output_specific_fully_connected(self, inputs, mask=None):
         feature_hidden = inputs

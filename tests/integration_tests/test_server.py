@@ -78,12 +78,19 @@ def output_keys_for(output_features):
     for feature in output_features:
         name = feature["name"]
         if feature["type"] == "category":
-            keys.append(f"{name}_predictions")
-            keys.append(f"{name}_probability")
-            keys.append(f"{name}_probabilities")
-            keys.append(f"{name}_probabilities_<UNK>")
-            for category in feature["idx2str"]:
-                keys.append(f"{name}_probabilities_{category}")
+            keys.extend(
+                (
+                    f"{name}_predictions",
+                    f"{name}_probability",
+                    f"{name}_probabilities",
+                    f"{name}_probabilities_<UNK>",
+                )
+            )
+
+            keys.extend(
+                f"{name}_probabilities_{category}"
+                for category in feature["idx2str"]
+            )
 
         elif feature["type"] == "numerical":
             keys.append(f"{name}_predictions")
@@ -224,7 +231,6 @@ def test_server_integration_with_audio(single_record, tmpdir):
 
         model_output, _ = model.predict(dataset=[first_entry], data_format=dict)
         model_output = model_output.to_dict("records")[0]
-        assert model_output == server_response
     else:
         # Batch prediction
         assert len(data_df) > 1
@@ -239,4 +245,5 @@ def test_server_integration_with_audio(single_record, tmpdir):
 
         model_output, _ = model.predict(dataset=data_df)
         model_output = model_output.to_dict("split")
-        assert model_output == server_response
+
+    assert model_output == server_response

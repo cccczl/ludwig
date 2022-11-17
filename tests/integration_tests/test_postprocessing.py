@@ -78,7 +78,7 @@ def test_binary_predictions(tmpdir, distinct_values):
         preds_df[f"{feature[NAME]}_probabilities_{str(true_value)}"],
         preds_df[f"{feature[NAME]}_probability"],
     ):
-        assert pred == false_value or pred == true_value
+        assert pred in [false_value, true_value]
         if pred == true_value:
             assert prob_1 == prob
         else:

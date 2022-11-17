@@ -38,8 +38,7 @@ def serialize_payload(data_source: Union[pd.DataFrame, pd.Series]) -> tuple:
     Returns: tuple(payload_dict, payload_files)
 
     """
-    payload_dict = {}
-    payload_dict["ndarray_dtype"] = {}
+    payload_dict = {"ndarray_dtype": {}}
     payload_files = {}
     if isinstance(data_source, pd.DataFrame):
         payload_dict["raw_data"] = data_source.to_json(orient="columns")
@@ -65,9 +64,9 @@ def serialize_payload(data_source: Union[pd.DataFrame, pd.Series]) -> tuple:
                 payload_files[v] = (v, open(v, "rb"), "application/octet-stream")
     else:
         ValueError(
-            '"data_source" must be either a pandas DataFrame or Series, '
-            "format found to be {}".format(type(data_source))
+            f'"data_source" must be either a pandas DataFrame or Series, format found to be {type(data_source)}'
         )
+
 
     return payload_dict, payload_files
 
@@ -104,9 +103,9 @@ def deserialize_payload(json_string: str) -> pd.DataFrame:
         df = pd.DataFrame(pd.Series(raw_data_dict)).T
     else:
         ValueError(
-            'Unknown "source_type" found.  Valid values are "dataframe" or '
-            '"series".  Instead found {}'.format(payload_dict["source_type"])
+            f'Unknown "source_type" found.  Valid values are "dataframe" or "series".  Instead found {payload_dict["source_type"]}'
         )
+
 
     # if source has ndarrays, rebuild those from list and set
     # original dtype.
@@ -129,10 +128,11 @@ def deserialize_request(form) -> tuple:
     Returns: tuple(pandas.DataFrame, list of temporary files to clean up)
     """
     files = []
-    file_index = {}
-    for k, v in form.multi_items():
-        if type(v) == UploadFile:
-            file_index[v.filename] = _write_file(v, files)
+    file_index = {
+        v.filename: _write_file(v, files)
+        for k, v in form.multi_items()
+        if type(v) == UploadFile
+    }
 
     # reconstruct the dataframe
     df = deserialize_payload(form["payload"])

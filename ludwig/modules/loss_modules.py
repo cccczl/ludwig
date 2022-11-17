@@ -104,8 +104,7 @@ class RMSPELoss(nn.Module, LogitsInputsMixin):
         super().__init__()
 
     def forward(self, preds: Tensor, target: Tensor) -> Tensor:
-        loss = utils.rmspe_loss(target, preds)
-        return loss
+        return utils.rmspe_loss(target, preds)
 
 
 @register_loss(BINARY_WEIGHTED_CROSS_ENTROPY, [BINARY])

@@ -91,17 +91,12 @@ DATETIME_FORMATS = {
 
 
 def generate_string(length):
-    sequence = []
-    for _ in range(length):
-        sequence.append(random.choice(letters))
+    sequence = [random.choice(letters) for _ in range(length)]
     return "".join(sequence)
 
 
 def build_vocab(size):
-    vocab = []
-    for _ in range(size):
-        vocab.append(generate_string(random.randint(2, 10)))
-    return vocab
+    return [generate_string(random.randint(2, 10)) for _ in range(size)]
 
 
 def return_none(feature):
@@ -174,11 +169,7 @@ def build_synthetic_dataset(dataset_size: int, features: List[dict]):
     ]
     """
     build_feature_parameters(features)
-    header = []
-    for feature in features:
-        header.append(feature[NAME])
-
-    yield header
+    yield [feature[NAME] for feature in features]
     for _ in range(dataset_size):
         yield generate_datapoint(features)
 
@@ -221,31 +212,39 @@ def generate_sequence(feature):
 
 
 def generate_set(feature):
-    elems = []
-    for _ in range(random.randint(0, feature.get("max_len", 3))):
-        elems.append(random.choice(feature["idx2str"]))
+    elems = [
+        random.choice(feature["idx2str"])
+        for _ in range(random.randint(0, feature.get("max_len", 3)))
+    ]
+
     return " ".join(list(set(elems)))
 
 
 def generate_bag(feature):
-    elems = []
-    for _ in range(random.randint(0, feature.get("max_len", 3))):
-        elems.append(random.choice(feature["idx2str"]))
+    elems = [
+        random.choice(feature["idx2str"])
+        for _ in range(random.randint(0, feature.get("max_len", 3)))
+    ]
+
     return " ".join(elems)
 
 
 def generate_text(feature):
     length = feature.get("max_len", 10)
-    text = []
-    for _ in range(random.randint(length - int(length * 0.2), length)):
-        text.append(random.choice(feature["idx2str"]))
+    text = [
+        random.choice(feature["idx2str"])
+        for _ in range(random.randint(length - int(length * 0.2), length))
+    ]
+
     return " ".join(text)
 
 
 def generate_timeseries(feature):
-    series = []
-    for _ in range(feature.get("max_len", 10)):
-        series.append(str(random.uniform(feature.get("min", 0), feature.get("max", 1))))
+    series = [
+        str(random.uniform(feature.get("min", 0), feature.get("max", 1)))
+        for _ in range(feature.get("max_len", 10))
+    ]
+
     return " ".join(series)
 
 
@@ -268,7 +267,7 @@ def generate_audio(feature):
     sampling_rate = 16000
     num_samples = int(audio_length * sampling_rate)
     audio = np.sin(np.arange(num_samples) / 100 * 2 * np.pi) * 2 * (np.random.random(num_samples) - 0.5)
-    audio_filename = uuid.uuid4().hex[:10].upper() + ".wav"
+    audio_filename = f"{uuid.uuid4().hex[:10].upper()}.wav"
 
     try:
         if not os.path.exists(destination_folder):
@@ -278,7 +277,7 @@ def generate_audio(feature):
         soundfile.write(audio_dest_path, audio, sampling_rate)
 
     except OSError as e:
-        raise OSError("Unable to create a folder for audio or save audio to disk." "{}".format(e))
+        raise OSError(f"Unable to create a folder for audio or save audio to disk.{e}")
 
     return audio_dest_path
 
@@ -315,7 +314,7 @@ def generate_image(feature):
         img = np.random.rand(width, height, num_channels) * 255.0
 
     # Generate a unique random filename
-    image_filename = uuid.uuid4().hex[:10].upper() + ".jpg"
+    image_filename = f"{uuid.uuid4().hex[:10].upper()}.jpg"
 
     # Save the image to disk either in a specified location/new folder
     try:
@@ -326,7 +325,7 @@ def generate_image(feature):
         imsave(image_dest_path, img.astype("uint8"))
 
     except OSError as e:
-        raise OSError("Unable to create a folder for images/save image to disk." "{}".format(e))
+        raise OSError(f"Unable to create a folder for images/save image to disk.{e}")
 
     return image_dest_path
 

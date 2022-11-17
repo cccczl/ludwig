@@ -88,19 +88,14 @@ class H3InputFeature(H3FeatureMixin, InputFeature):
     def __init__(self, feature, encoder_obj=None):
         super().__init__(feature)
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs):
         assert isinstance(inputs, torch.Tensor)
         assert inputs.dtype in [torch.uint8, torch.int64]
         assert len(inputs.shape) == 2
 
-        inputs_encoded = self.encoder_obj(inputs)
-
-        return inputs_encoded
+        return self.encoder_obj(inputs)
 
     @property
     def input_dtype(self):

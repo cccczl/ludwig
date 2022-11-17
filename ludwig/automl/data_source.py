@@ -62,7 +62,7 @@ class DataframeSource(DataSource):
         return avg_num_tokens(self.df[column])
 
     def is_string_type(self, dtype: str) -> bool:
-        return dtype in ["str", "string", "object"]
+        return dtype in {"str", "string", "object"}
 
     def __len__(self) -> int:
         return len(self.df)

@@ -88,12 +88,9 @@ def compute_memory_usage(config, training_set_metadata) -> int:
     update_config_with_metadata(config, training_set_metadata)
     lm = LudwigModel.create_model(config)
     model_tensors = lm.collect_weights()
-    total_size = 0
     batch_size = config[TRAINING][BATCH_SIZE]
-    for tnsr in model_tensors:
-        total_size += tnsr[1].numpy().size * batch_size
-    total_bytes = total_size * 32  # assumes 32-bit precision
-    return total_bytes
+    total_size = sum(tnsr[1].numpy().size * batch_size for tnsr in model_tensors)
+    return total_size * 32
 
 
 def sub_new_params(config: dict, new_param_vals: dict):

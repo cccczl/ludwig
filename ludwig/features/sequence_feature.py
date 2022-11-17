@@ -124,7 +124,7 @@ class SequenceFeatureMixin(BaseFeatureMixin):
 
     @staticmethod
     def feature_data(column, metadata, preprocessing_parameters, backend):
-        sequence_data = build_sequence_matrix(
+        return build_sequence_matrix(
             sequences=column,
             inverse_vocabulary=metadata["str2idx"],
             tokenizer_type=preprocessing_parameters["tokenizer"],
@@ -136,7 +136,6 @@ class SequenceFeatureMixin(BaseFeatureMixin):
             tokenizer_vocab_file=preprocessing_parameters["vocab_file"],
             processor=backend.df_engine,
         )
-        return sequence_data
 
     @staticmethod
     def add_feature_data(
@@ -162,10 +161,7 @@ class SequenceInputFeature(SequenceFeatureMixin, InputFeature):
         if "vocab" in feature:
             feature["vocab_size"] = len(feature["vocab"])
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs: torch.Tensor, mask=None):
         assert isinstance(inputs, torch.Tensor)
@@ -256,78 +252,60 @@ class SequenceOutputFeature(SequenceFeatureMixin, OutputFeature):
     def update_config_with_metadata(output_feature, feature_metadata, *args, **kwargs):
         output_feature["vocab_size"] = feature_metadata["vocab_size"]
         output_feature["max_sequence_length"] = feature_metadata["max_sequence_length"]
-        if isinstance(output_feature[LOSS]["class_weights"], (list, tuple)):
-            if len(output_feature[LOSS]["class_weights"]) != output_feature["vocab_size"]:
-                raise ValueError(
-                    "The length of class_weights ({}) is not compatible with "
-                    "the number of classes ({}) for feature {}. "
-                    "Check the metadata JSON file to see the classes "
-                    "and their order and consider there needs to be a weight "
-                    "for the <UNK> and <PAD> class too.".format(
-                        len(output_feature[LOSS]["class_weights"]),
-                        output_feature["vocab_size"],
-                        output_feature[COLUMN],
-                    )
-                )
+        if (
+            isinstance(output_feature[LOSS]["class_weights"], (list, tuple))
+            and len(output_feature[LOSS]["class_weights"])
+            != output_feature["vocab_size"]
+        ):
+            raise ValueError(
+                f'The length of class_weights ({len(output_feature[LOSS]["class_weights"])}) is not compatible with the number of classes ({output_feature["vocab_size"]}) for feature {output_feature[COLUMN]}. Check the metadata JSON file to see the classes and their order and consider there needs to be a weight for the <UNK> and <PAD> class too.'
+            )
+
 
         if output_feature[LOSS]["class_similarities_temperature"] > 0:
-            if "class_similarities" in output_feature[LOSS]:
-                similarities = output_feature[LOSS]["class_similarities"]
-                temperature = output_feature[LOSS]["class_similarities_temperature"]
-
-                curr_row = 0
-                first_row_length = 0
-                is_first_row = True
-                for row in similarities:
-                    if is_first_row:
-                        first_row_length = len(row)
-                        is_first_row = False
-                        curr_row += 1
-                    else:
-                        curr_row_length = len(row)
-                        if curr_row_length != first_row_length:
-                            raise ValueError(
-                                "The length of row {} of the class_similarities "
-                                "of {} is {}, different from the length of "
-                                "the first row {}. All rows must have "
-                                "the same length.".format(
-                                    curr_row, output_feature[COLUMN], curr_row_length, first_row_length
-                                )
-                            )
-                        else:
-                            curr_row += 1
-                all_rows_length = first_row_length
-
-                if all_rows_length != len(similarities):
-                    raise ValueError(
-                        "The class_similarities matrix of {} has "
-                        "{} rows and {} columns, "
-                        "their number must be identical.".format(
-                            output_feature[COLUMN], len(similarities), all_rows_length
-                        )
-                    )
-
-                if all_rows_length != output_feature["vocab_size"]:
-                    raise ValueError(
-                        "The size of the class_similarities matrix of {} is "
-                        "{}, different from the number of classes ({}). "
-                        "Check the metadata JSON file to see the classes "
-                        "and their order and "
-                        "consider <UNK> and <PAD> class too.".format(
-                            output_feature[COLUMN], all_rows_length, output_feature["vocab_size"]
-                        )
-                    )
-
-                similarities = np.array(similarities, dtype=np.float32)
-                for i in range(len(similarities)):
-                    similarities[i, :] = softmax(similarities[i, :], temperature=temperature)
-                output_feature[LOSS]["class_similarities"] = similarities
-            else:
+            if "class_similarities" not in output_feature[LOSS]:
                 raise ValueError(
-                    "class_similarities_temperature > 0, "
-                    "but no class_similarities are provided "
-                    "for feature {}".format(output_feature[COLUMN])
+                    f"class_similarities_temperature > 0, but no class_similarities are provided for feature {output_feature[COLUMN]}"
                 )
+
+            similarities = output_feature[LOSS]["class_similarities"]
+            temperature = output_feature[LOSS]["class_similarities_temperature"]
+
+            curr_row = 0
+            first_row_length = 0
+            is_first_row = True
+            for row in similarities:
+                if is_first_row:
+                    first_row_length = len(row)
+                    is_first_row = False
+                    curr_row += 1
+                else:
+                    curr_row_length = len(row)
+                    if curr_row_length != first_row_length:
+                        raise ValueError(
+                            f"The length of row {curr_row} of the class_similarities of {output_feature[COLUMN]} is {curr_row_length}, different from the length of the first row {first_row_length}. All rows must have the same length."
+                        )
+
+                    else:
+                        curr_row += 1
+            all_rows_length = first_row_length
+
+            if all_rows_length != len(similarities):
+                raise ValueError(
+                    f"The class_similarities matrix of {output_feature[COLUMN]} has {len(similarities)} rows and {all_rows_length} columns, their number must be identical."
+                )
+
+
+            if all_rows_length != output_feature["vocab_size"]:
+                raise ValueError(
+                    f'The size of the class_similarities matrix of {output_feature[COLUMN]} is {all_rows_length}, different from the number of classes ({output_feature["vocab_size"]}). Check the metadata JSON file to see the classes and their order and consider <UNK> and <PAD> class too.'
+                )
+
+
+            similarities = np.array(similarities, dtype=np.float32)
+            for i in range(len(similarities)):
+                similarities[i, :] = softmax(similarities[i, :], temperature=temperature)
+            output_feature[LOSS]["class_similarities"] = similarities
 
     @staticmethod
     def calculate_overall_stats(predictions, targets, train_set_metadata):
@@ -344,29 +322,25 @@ class SequenceOutputFeature(SequenceFeatureMixin, OutputFeature):
     ):
         predictions_col = f"{self.feature_name}_{PREDICTIONS}"
         lengths_col = f"{self.feature_name}_{LENGTHS}"
-        if predictions_col in result:
-            if "idx2str" in metadata:
+        if predictions_col in result and "idx2str" in metadata:
+            def idx2str(row):
+                pred = row[predictions_col]
+                length = metadata["max_sequence_length"]
+                return [
+                    metadata["idx2str"][token] if token < len(metadata["idx2str"]) else UNKNOWN_SYMBOL
+                    for token in [pred[i] for i in range(length)]
+                ]
 
-                def idx2str(row):
-                    pred = row[predictions_col]
-                    length = metadata["max_sequence_length"]
-                    return [
-                        metadata["idx2str"][token] if token < len(metadata["idx2str"]) else UNKNOWN_SYMBOL
-                        for token in [pred[i] for i in range(length)]
-                    ]
-
-                result[predictions_col] = backend.df_engine.apply_objects(result, idx2str)
+            result[predictions_col] = backend.df_engine.apply_objects(result, idx2str)
 
         last_preds_col = f"{self.feature_name}_{LAST_PREDICTIONS}"
-        if last_preds_col in result:
-            if "idx2str" in metadata:
+        if last_preds_col in result and "idx2str" in metadata:
+            def last_idx2str(last_pred):
+                if last_pred < len(metadata["idx2str"]):
+                    return metadata["idx2str"][last_pred]
+                return UNKNOWN_SYMBOL
 
-                def last_idx2str(last_pred):
-                    if last_pred < len(metadata["idx2str"]):
-                        return metadata["idx2str"][last_pred]
-                    return UNKNOWN_SYMBOL
-
-                result[last_preds_col] = backend.df_engine.map_objects(result[last_preds_col], last_idx2str)
+            result[last_preds_col] = backend.df_engine.map_objects(result[last_preds_col], last_idx2str)
 
         probs_col = f"{self.feature_name}_{PROBABILITIES}"
         if probs_col in result:
