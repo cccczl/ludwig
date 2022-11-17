@@ -109,7 +109,7 @@ class Mnist(CSVLoadMixin, GZipDownloadMixin, BaseDataset):
 
         def write_processed_image(t):
             i, label = t
-            output_filename = os.path.join(output_dirs[label], str(i) + ".png")
+            output_filename = os.path.join(output_dirs[label], f"{str(i)}.png")
             imsave(output_filename, data[i])
 
         # write out image data

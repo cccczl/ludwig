@@ -119,7 +119,7 @@ def test_kfold_cv_cli(features_to_use: FeaturesToUse):
 
         # check for required keys
         cv_statistics = load_json(statistics_fp)
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)] + ["overall"]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)] + ["overall"]:
             assert key in cv_statistics
 
         # check for existence and structure of split indices file
@@ -127,7 +127,7 @@ def test_kfold_cv_cli(features_to_use: FeaturesToUse):
 
         # check for required keys
         cv_indices = load_json(indices_fp)
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)]:
             assert key in cv_indices
 
 
@@ -167,10 +167,10 @@ def test_kfold_cv_api_from_file():
         (kfold_cv_stats, kfold_split_indices) = kfold_cross_validate(3, config=config_fp, dataset=training_data_fp)
 
         # correct structure for results from kfold cv
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)] + ["overall"]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)] + ["overall"]:
             assert key in kfold_cv_stats
 
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)]:
             assert key in kfold_split_indices
 
 
@@ -206,10 +206,10 @@ def test_kfold_cv_api_in_memory():
         (kfold_cv_stats, kfold_split_indices) = kfold_cross_validate(3, config=config, dataset=training_data_fp)
 
         # correct structure for results from kfold cv
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)] + ["overall"]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)] + ["overall"]:
             assert key in kfold_cv_stats
 
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)]:
             assert key in kfold_split_indices
 
 
@@ -264,8 +264,8 @@ def test_kfold_cv_dataset_formats(data_format):
         (kfold_cv_stats, kfold_split_indices) = kfold_cross_validate(3, config=config, dataset=dataset_to_use)
 
         # correct structure for results from kfold cv
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)] + ["overall"]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)] + ["overall"]:
             assert key in kfold_cv_stats
 
-        for key in ["fold_" + str(i + 1) for i in range(num_folds)]:
+        for key in [f"fold_{str(i + 1)}" for i in range(num_folds)]:
             assert key in kfold_split_indices

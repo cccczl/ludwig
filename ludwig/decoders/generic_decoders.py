@@ -85,16 +85,15 @@ class Projector(Decoder):
 
         self.activation = get_activation(activation)
 
-        if clip is not None:
-            if isinstance(clip, (list, tuple)) and len(clip) == 2:
-                self.clip = partial(torch.clip, min=clip[0], max=clip[1])
-            else:
-                raise ValueError(
-                    "The clip parameter of {} is {}. "
-                    "It must be a list or a tuple of length 2.".format(self.feature_name, self.clip)
-                )
-        else:
+        if clip is None:
             self.clip = None
+
+        elif isinstance(clip, (list, tuple)) and len(clip) == 2:
+            self.clip = partial(torch.clip, min=clip[0], max=clip[1])
+        else:
+            raise ValueError(
+                f"The clip parameter of {self.feature_name} is {self.clip}. It must be a list or a tuple of length 2."
+            )
 
     @property
     def input_shape(self):

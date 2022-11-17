@@ -14,6 +14,11 @@ def test_output_feature_utils():
     assert list(tensor_dict.keys()) == ["feature_1::1", "feature_1::10", "feature_2::2", "feature_2::20"]
     assert output_feature_utils.get_output_feature_tensor(tensor_dict, "feature_1", "1") == torch.Tensor([1])
     assert list(output_feature_utils.get_single_output_feature_tensors(tensor_dict, "feature_1").keys()) == ["1", "10"]
-    assert list(output_feature_utils.get_single_output_feature_tensors(tensor_dict, "feature_3").keys()) == []
+    assert not list(
+        output_feature_utils.get_single_output_feature_tensors(
+            tensor_dict, "feature_3"
+        ).keys()
+    )
+
     with pytest.raises(Exception):
         output_feature_utils.get_output_feature_tensor(tensor_dict, "feature_1", "2")

@@ -167,7 +167,7 @@ def test_model_progress_save(skip_save_progress, skip_save_model, generated_data
     model_dir = os.path.join(output_dir, "model")
     files = [f for f in os.listdir(model_dir) if re.match(r"model_weights", f)]
     if skip_save_model:
-        assert len(files) == 0
+        assert not files
     else:
         assert len(files) == 1
 

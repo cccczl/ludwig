@@ -54,7 +54,7 @@ class PandasDataset(Dataset):
         indices = indices[:, np.argsort(indices[0])]
 
         with download_h5(self.data_hdf5_fp) as h5_file:
-            im_data = h5_file[proc_column + "_data"][indices[0, :], :, :]
+            im_data = h5_file[f"{proc_column}_data"][indices[0, :], :, :]
         indices[2, :] = np.arange(len(sub_batch))
         indices = indices[:, np.argsort(indices[1])]
         return im_data[indices[2, :]]
@@ -68,8 +68,9 @@ class PandasDataset(Dataset):
     @contextlib.contextmanager
     def initialize_batcher(self, batch_size=128, should_shuffle=True, seed=0, ignore_last=False, horovod=None):
         sampler = DistributedSampler(len(self), shuffle=should_shuffle, seed=seed, horovod=horovod)
-        batcher = RandomAccessBatcher(self, sampler, batch_size=batch_size, ignore_last=ignore_last)
-        yield batcher
+        yield RandomAccessBatcher(
+            self, sampler, batch_size=batch_size, ignore_last=ignore_last
+        )
 
 
 class PandasDatasetManager(DatasetManager):

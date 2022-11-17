@@ -101,16 +101,18 @@ class SST(ABC, ZipDownloadMixin, MultifileJoinProcessMixin, CSVLoadMixin, BaseDa
             trees_pointers = []
             with open(os.path.join(self.raw_dataset_path, "stanfordSentimentTreebank/STree.txt")) as f:
                 Lines = f.readlines()
-                for line in Lines:
-                    if line:
-                        trees_pointers.append([int(s.strip()) for s in line.split("|")])
+                trees_pointers.extend(
+                    [int(s.strip()) for s in line.split("|")]
+                    for line in Lines
+                    if line
+                )
 
             trees_phrases = []
             with open(os.path.join(self.raw_dataset_path, "stanfordSentimentTreebank/SOStr.txt")) as f:
                 Lines = f.readlines()
-                for line in Lines:
-                    if line:
-                        trees_phrases.append([s.strip() for s in line.split("|")])
+                trees_phrases.extend(
+                    [s.strip() for s in line.split("|")] for line in Lines if line
+                )
 
         splits = {"train": 1, "test": 2, "dev": 3}
 
@@ -235,7 +237,7 @@ class SSTTree:
 
     def create_tree(self, parents, tree_phrases):
         n = len(parents)
-        self.nodes = [None for i in range(n)]
+        self.nodes = [None for _ in range(n)]
         self.root = [None]
         for i in range(n):
             self.create_node(parents, i)

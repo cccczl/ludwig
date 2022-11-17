@@ -72,11 +72,10 @@ class ECD(LudwigModule):
         clear_data_cache()
 
     def get_model_inputs(self):
-        inputs = {
+        return {
             input_feature_name: input_feature.create_sample_input()
             for input_feature_name, input_feature in self.input_features.items()
         }
-        return inputs
 
     def save_torchscript(self, save_path):
         model_inputs = self.get_model_inputs()
@@ -113,10 +112,12 @@ class ECD(LudwigModule):
             inputs, targets = inputs
             # Convert targets to tensors.
             for target_feature_name, target_value in targets.items():
-                if not isinstance(target_value, torch.Tensor):
-                    targets[target_feature_name] = torch.from_numpy(target_value)
-                else:
-                    targets[target_feature_name] = target_value
+                targets[target_feature_name] = (
+                    target_value
+                    if isinstance(target_value, torch.Tensor)
+                    else torch.from_numpy(target_value)
+                )
+
         else:
             targets = None
 
@@ -124,10 +125,11 @@ class ECD(LudwigModule):
 
         # Convert inputs to tensors.
         for input_feature_name, input_values in inputs.items():
-            if not isinstance(input_values, torch.Tensor):
-                inputs[input_feature_name] = torch.from_numpy(input_values)
-            else:
-                inputs[input_feature_name] = input_values
+            inputs[input_feature_name] = (
+                input_values
+                if isinstance(input_values, torch.Tensor)
+                else torch.from_numpy(input_values)
+            )
 
         encoder_outputs = {}
         for input_feature_name, input_values in inputs.items():
@@ -166,27 +168,26 @@ class ECD(LudwigModule):
                 of_list = [output_features]
             else:
                 raise ValueError(
-                    "'output_features' {} is not a valid for this model. "
-                    "Available ones are: {}".format(output_features, set(self.output_features.keys()))
+                    f"'output_features' {output_features} is not a valid for this model. Available ones are: {set(self.output_features.keys())}"
                 )
+
         elif isinstance(output_features, list or set):
             if output_features.issubset(self.output_features):
                 of_list = output_features
             else:
                 raise ValueError(
-                    "'output_features' {} must be a subset of "
-                    "available features {}".format(output_features, set(self.output_features.keys()))
+                    f"'output_features' {output_features} must be a subset of available features {set(self.output_features.keys())}"
                 )
+
         else:
             raise ValueError("'output_features' must be None or a string or a list " "of output features")
 
         outputs = self(inputs)
 
-        predictions = {}
-        for of_name in of_list:
-            predictions[of_name] = self.output_features[of_name].predictions(outputs, of_name)
-
-        return predictions
+        return {
+            of_name: self.output_features[of_name].predictions(outputs, of_name)
+            for of_name in of_list
+        }
 
     def evaluation_step(self, inputs, targets):
         predictions = self.predictions(inputs, output_features=None)
@@ -248,9 +249,11 @@ class ECD(LudwigModule):
         self.eval_loss_metric.update(self.eval_loss(targets, predictions)[0])
 
     def get_metrics(self):
-        all_of_metrics = {}
-        for of_name, of_obj in self.output_features.items():
-            all_of_metrics[of_name] = of_obj.get_metrics()
+        all_of_metrics = {
+            of_name: of_obj.get_metrics()
+            for of_name, of_obj in self.output_features.items()
+        }
+
         all_of_metrics[COMBINED] = {LOSS: get_scalar_from_ludwig_metric(self.eval_loss_metric)}
         return all_of_metrics
 
@@ -300,9 +303,7 @@ def build_single_input(
             encoder_obj = other_input_features[tied_input_feature_name].encoder_obj
 
     input_feature_class = get_from_registry(input_feature_def[TYPE], input_type_registry)
-    input_feature_obj = input_feature_class(input_feature_def, encoder_obj)
-
-    return input_feature_obj
+    return input_feature_class(input_feature_def, encoder_obj)
 
 
 def build_outputs(output_features_def: List[Dict[str, Any]], combiner: Combiner) -> Dict[str, OutputFeature]:
@@ -325,6 +326,4 @@ def build_single_output(output_feature_def: Dict[str, Any], output_features: Dic
     logger.debug(f"Output {output_feature_def[TYPE]} feature {output_feature_def[NAME]}")
 
     output_feature_class = get_from_registry(output_feature_def[TYPE], output_type_registry)
-    output_feature_obj = output_feature_class(output_feature_def, output_features)
-
-    return output_feature_obj
+    return output_feature_class(output_feature_def, output_features)

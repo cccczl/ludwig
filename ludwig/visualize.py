@@ -83,7 +83,7 @@ def validate_conf_treshholds_and_probabilities_2d_3d(probabilities, treshhold_ou
     for item, value in validation_mapping.items():
         item_len = len(value)
         if item_len != 2:
-            exception_message = "Two {} should be provided - " "{} was given.".format(item, item_len)
+            exception_message = f"Two {item} should be provided - {item_len} was given."
             logging.error(exception_message)
             raise RuntimeError(exception_message)
 
@@ -198,8 +198,9 @@ def _extract_ground_truth_values(
     data_format = figure_data_format_dataset(ground_truth)
     if data_format not in CACHEABLE_FORMATS:
         raise ValueError(
-            "{} is not supported for ground truth file, " "valid types are {}".format(data_format, CACHEABLE_FORMATS)
+            f"{data_format} is not supported for ground truth file, valid types are {CACHEABLE_FORMATS}"
         )
+
     reader = get_from_registry(data_format, external_data_reader_registry)
 
     # retrieve ground truth from source data set
@@ -209,16 +210,14 @@ def _extract_ground_truth_values(
     if SPLIT in gt_df:
         # get split value from source data set
         split = gt_df[SPLIT]
-        gt = gt_df[output_feature_name][split == ground_truth_split]
+        return gt_df[output_feature_name][split == ground_truth_split]
     elif split_file is not None:
         # retrieve from split file
         split = load_array(split_file)
-        gt = gt_df[output_feature_name][split == ground_truth_split]
+        return gt_df[output_feature_name][split == ground_truth_split]
     else:
         # use all the data in ground_truth
-        gt = gt_df[output_feature_name]
-
-    return gt
+        return gt_df[output_feature_name]
 
 
 def _get_cols_from_predictions(predictions_paths, cols, metadata):
@@ -1309,7 +1308,11 @@ def compare_performance(
     output_feature_names = _validate_output_feature_name_from_test_stats(output_feature_name, test_stats_per_model_list)
 
     for output_feature_name in output_feature_names:
-        metric_names_sets = list(set(tspr[output_feature_name].keys()) for tspr in test_stats_per_model_list)
+        metric_names_sets = [
+            set(tspr[output_feature_name].keys())
+            for tspr in test_stats_per_model_list
+        ]
+
         metric_names = metric_names_sets[0]
         for metric_names_set in metric_names_sets:
             metric_names = metric_names.intersection(metric_names_set)
@@ -1430,9 +1433,10 @@ def compare_classifiers_performance_from_prob(
 
         accuracies.append((ground_truth == top1).sum() / len(ground_truth))
 
-        hits_at_k = 0
-        for j in range(len(ground_truth)):
-            hits_at_k += np.in1d(ground_truth[j], topk[j])
+        hits_at_k = sum(
+            np.in1d(ground_truth[j], topk[j]) for j in range(len(ground_truth))
+        )
+
         hits_at_ks.append(np.asscalar(hits_at_k) / len(ground_truth))
 
         mrr = 0
@@ -1445,7 +1449,11 @@ def compare_classifiers_performance_from_prob(
     filename = None
     if output_directory:
         os.makedirs(output_directory, exist_ok=True)
-        filename = os.path.join(output_directory, "compare_classifiers_performance_from_prob." + file_format)
+        filename = os.path.join(
+            output_directory,
+            f"compare_classifiers_performance_from_prob.{file_format}",
+        )
+
 
     visualization_utils.compare_classifiers_plot(
         [accuracies, hits_at_ks, mrrs], [ACCURACY, HITS_AT_K, "mrr"], model_names_list, filename=filename
@@ -1507,11 +1515,12 @@ def compare_classifiers_performance_from_pred(
     model_names_list = convert_to_list(model_names)
     mapped_preds = []
     try:
-        for pred in preds:
-            mapped_preds.append([metadata[output_feature_name]["str2idx"][val] for val in pred])
+        mapped_preds.extend(
+            [metadata[output_feature_name]["str2idx"][val] for val in pred]
+            for pred in preds
+        )
+
         preds = mapped_preds
-    # If predictions are coming from npy file there is no need to convert to
-    # numeric labels using metadata
     except (TypeError, KeyError):
         pass
     accuracies = []
@@ -1519,7 +1528,7 @@ def compare_classifiers_performance_from_pred(
     recalls = []
     f1s = []
 
-    for i, pred in enumerate(preds):
+    for pred in preds:
         accuracies.append(sklearn.metrics.accuracy_score(ground_truth, pred))
         precisions.append(sklearn.metrics.precision_score(ground_truth, pred, average="macro"))
         recalls.append(sklearn.metrics.recall_score(ground_truth, pred, average="macro"))
@@ -1528,7 +1537,11 @@ def compare_classifiers_performance_from_pred(
     filename = None
     if output_directory:
         os.makedirs(output_directory, exist_ok=True)
-        filename = os.path.join(output_directory, "compare_classifiers_performance_from_pred." + file_format)
+        filename = os.path.join(
+            output_directory,
+            f"compare_classifiers_performance_from_pred.{file_format}",
+        )
+
 
     visualization_utils.compare_classifiers_plot(
         [accuracies, precisions, recalls, f1s],
@@ -1637,9 +1650,11 @@ def compare_classifiers_performance_subset(
 
         accuracies.append(np.sum(gt_subset == top1_subset) / len(gt_subset))
 
-        hits_at_k = 0
-        for j in range(len(gt_subset)):
-            hits_at_k += np.in1d(gt_subset[j], top3_subset[i, :])
+        hits_at_k = sum(
+            np.in1d(gt_subset[j], top3_subset[i, :])
+            for j in range(len(gt_subset))
+        )
+
         hits_at_ks.append(np.asscalar(hits_at_k) / len(gt_subset))
 
     title = None
@@ -1648,12 +1663,16 @@ def compare_classifiers_performance_subset(
             k, "es" if k > 1 else "", len(gt_subset) / len(ground_truth) * 100
         )
     elif subset == PREDICTIONS:
-        title = "Classifier performance on first {} class{}".format(k, "es" if k > 1 else "")
+        title = f'Classifier performance on first {k} class{"es" if k > 1 else ""}'
 
     filename = None
     if output_directory:
         os.makedirs(output_directory, exist_ok=True)
-        filename = os.path.join(output_directory, "compare_classifiers_performance_subset." + file_format)
+        filename = os.path.join(
+            output_directory,
+            f"compare_classifiers_performance_subset.{file_format}",
+        )
+
 
     visualization_utils.compare_classifiers_plot(
         [accuracies, hits_at_ks], [ACCURACY, HITS_AT_K], model_names_list, title=title, filename=filename
@@ -1734,7 +1753,11 @@ def compare_classifiers_performance_changing_k(
     filename = None
     if output_directory:
         os.makedirs(output_directory, exist_ok=True)
-        filename = os.path.join(output_directory, "compare_classifiers_performance_changing_k." + file_format)
+        filename = os.path.join(
+            output_directory,
+            f"compare_classifiers_performance_changing_k.{file_format}",
+        )
+
 
     visualization_utils.compare_classifiers_line_plot(
         np.arange(1, k + 1),
@@ -1793,15 +1816,15 @@ def compare_classifiers_multiclass_multimetric(
             model_name_name = model_names_list[i] if model_names_list is not None and i < len(model_names_list) else ""
             if "per_class_stats" not in test_statistics[output_feature_name]:
                 logging.warning(
-                    f"The output_feature_name {output_feature_name} in test statistics does not contain "
-                    + "per_class_stats, skipping it."
+                    f"The output_feature_name {output_feature_name} in test statistics does not contain per_class_stats, skipping it."
                 )
+
                 break
             per_class_stats = test_statistics[output_feature_name]["per_class_stats"]
-            precisions = []
             recalls = []
             f1_scores = []
             labels = []
+            precisions = []
             for _, class_name in sorted(
                 ((metadata[output_feature_name]["str2idx"][key], key) for key in per_class_stats.keys()),
                 key=lambda tup: tup[0],
@@ -1813,10 +1836,10 @@ def compare_classifiers_multiclass_multimetric(
                 labels.append(class_name)
             for k in top_n_classes:
                 k = min(k, len(precisions)) if k > 0 else len(precisions)
-                ps = precisions[0:k]
-                rs = recalls[0:k]
-                fs = f1_scores[0:k]
-                ls = labels[0:k]
+                ps = precisions[:k]
+                rs = recalls[:k]
+                fs = f1_scores[:k]
+                ls = labels[:k]
 
                 filename = None
                 if filename_template_path:
@@ -1827,10 +1850,10 @@ def compare_classifiers_multiclass_multimetric(
                     [ps, rs, fs],
                     ["precision", "recall", "f1 score"],
                     labels=ls,
-                    title="{} Multiclass Precision / Recall / "
-                    "F1 Score top {} {}".format(model_name_name, k, output_feature_name),
+                    title=f"{model_name_name} Multiclass Precision / Recall / F1 Score top {k} {output_feature_name}",
                     filename=filename,
                 )
+
 
                 p_np = np.nan_to_num(np.array(precisions, dtype=np.float32))
                 r_np = np.nan_to_num(np.array(recalls, dtype=np.float32))
@@ -1847,10 +1870,10 @@ def compare_classifiers_multiclass_multimetric(
                     [p_np[higher_f1s], r_np[higher_f1s], f1_np[higher_f1s]],
                     ["precision", "recall", "f1 score"],
                     labels=labels_np[higher_f1s].tolist(),
-                    title="{} Multiclass Precision / Recall / "
-                    "F1 Score best {} classes {}".format(model_name_name, k, output_feature_name),
+                    title=f"{model_name_name} Multiclass Precision / Recall / F1 Score best {k} classes {output_feature_name}",
                     filename=filename,
                 )
+
                 lower_f1s = sorted_indices[:k]
                 filename = None
                 if filename_template_path:

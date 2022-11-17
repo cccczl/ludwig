@@ -86,7 +86,7 @@ class FCLayer(LudwigModule):
     def forward(self, inputs, mask=None):
         hidden = inputs
 
-        for i, layer in enumerate(self.layers):
+        for layer in self.layers:
             hidden = layer(hidden)
 
         return hidden
@@ -113,13 +113,7 @@ class FCStack(LudwigModule):
         super().__init__()
         self.input_size = first_layer_input_size
 
-        if layers is None:
-            self.layers = []
-            for i in range(num_layers):
-                self.layers.append({})
-        else:
-            self.layers = layers
-
+        self.layers = [{} for _ in range(num_layers)] if layers is None else layers
         if len(self.layers) > 0:
             self.layers[0]["input_size"] = first_layer_input_size
         for i, layer in enumerate(self.layers):
@@ -146,7 +140,7 @@ class FCStack(LudwigModule):
 
         self.stack = ModuleList()
 
-        for i, layer in enumerate(self.layers):
+        for layer in self.layers:
             self.stack.append(
                 FCLayer(
                     input_size=layer["input_size"],

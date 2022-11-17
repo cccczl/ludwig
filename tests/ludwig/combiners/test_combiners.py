@@ -106,7 +106,7 @@ def encoder_outputs():
         [BATCH_SIZE, SEQ_SIZE, HIDDEN_SIZE],
         [BATCH_SIZE, SEQ_SIZE, OTHER_HIDDEN_SIZE],
     ]
-    feature_names = ["feature_" + str(i + 1) for i in range(len(shapes_list))]
+    feature_names = [f"feature_{str(i + 1)}" for i in range(len(shapes_list))]
 
     for feature_name, batch_shape in zip(feature_names, shapes_list):
         encoder_outputs[feature_name] = {"encoder_output": torch.randn(batch_shape, dtype=torch.float32, device=DEVICE)}
@@ -138,11 +138,17 @@ def encoder_comparator_outputs():
         [BATCH_SIZE, SEQ_SIZE, HIDDEN_SIZE],
         [BATCH_SIZE, SEQ_SIZE, OTHER_HIDDEN_SIZE],
     ]
-    text_feature_names = ["text_feature_" + str(i + 1) for i in range(len(shapes_list))]
-    image_feature_names = ["image_feature_" + str(i + 1) for i in range(len(shapes_list))]
+    text_feature_names = [
+        f"text_feature_{str(i + 1)}" for i in range(len(shapes_list))
+    ]
+
+    image_feature_names = [
+        f"image_feature_{str(i + 1)}" for i in range(len(shapes_list))
+    ]
+
     for i, (feature_name, batch_shape) in enumerate(zip(text_feature_names, shapes_list)):
         # is there a better way to do this?
-        if i == 0 or i == 3:
+        if i in [0, 3]:
             dot_product_shape = [batch_shape[0], BASE_FC_SIZE]
             encoder_outputs[feature_name] = {
                 "encoder_output": torch.randn(dot_product_shape, dtype=torch.float32, device=DEVICE)
@@ -155,7 +161,7 @@ def encoder_comparator_outputs():
             input_features[feature_name] = PseudoInputFeature(feature_name, batch_shape)
 
     for i, (feature_name, batch_shape) in enumerate(zip(image_feature_names, shapes_list)):
-        if i == 0 or i == 3:
+        if i in [0, 3]:
             dot_product_shape = [batch_shape[0], BASE_FC_SIZE]
             encoder_outputs[feature_name] = {
                 "encoder_output": torch.randn(dot_product_shape, dtype=torch.float32, device=DEVICE)
@@ -237,9 +243,10 @@ def test_sequence_concat_combiner(
         assert encoder_outputs_dict[k]["encoder_output"].shape[1:] == combiner.input_shape[k]
 
     # calculate expected hidden size for concatenated tensors
-    hidden_size = 0
-    for k in encoder_outputs_dict:
-        hidden_size += encoder_outputs_dict[k]["encoder_output"].shape[-1]
+    hidden_size = sum(
+        encoder_outputs_dict[k]["encoder_output"].shape[-1]
+        for k in encoder_outputs_dict
+    )
 
     # confirm correctness of concatenated_shape
     assert combiner.concatenated_shape[-1] == hidden_size
@@ -280,9 +287,10 @@ def test_sequence_combiner(
         assert encoder_outputs_dict[k]["encoder_output"].shape[1:] == combiner.input_shape[k]
 
     # calculate expected hidden size for concatenated tensors
-    hidden_size = 0
-    for k in encoder_outputs_dict:
-        hidden_size += encoder_outputs_dict[k]["encoder_output"].shape[-1]
+    hidden_size = sum(
+        encoder_outputs_dict[k]["encoder_output"].shape[-1]
+        for k in encoder_outputs_dict
+    )
 
     # confirm correctness of concatenated_shape
     assert combiner.concatenated_shape[-1] == hidden_size
@@ -390,9 +398,10 @@ def test_transformer_combiner(encoder_outputs: tuple, transformer_fc_size: int, 
         assert encoder_outputs_dict[k]["encoder_output"].shape[1:] == combiner.input_shape[k]
 
     # calculate expected hidden size for concatenated tensors
-    hidden_size = 0
-    for k in encoder_outputs_dict:
-        hidden_size += np.prod(encoder_outputs_dict[k]["encoder_output"].shape[1:])
+    hidden_size = sum(
+        np.prod(encoder_outputs_dict[k]["encoder_output"].shape[1:])
+        for k in encoder_outputs_dict
+    )
 
     # confirm correctness of effective_input_shape
     assert combiner.concatenated_shape[-1] == hidden_size

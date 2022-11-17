@@ -127,10 +127,7 @@ class SetInputFeature(SetFeatureMixin, InputFeature):
     def __init__(self, feature, encoder_obj=None):
         super().__init__(feature)
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs):
         assert isinstance(inputs, torch.Tensor)
@@ -213,36 +210,29 @@ class SetOutputFeature(SetFeatureMixin, OutputFeature):
     @staticmethod
     def update_config_with_metadata(output_feature, feature_metadata, *args, **kwargs):
         output_feature["num_classes"] = feature_metadata["vocab_size"]
-        if isinstance(output_feature[LOSS]["class_weights"], (list, tuple)):
-            if len(output_feature[LOSS]["class_weights"]) != output_feature["num_classes"]:
-                raise ValueError(
-                    "The length of class_weights ({}) is not compatible with "
-                    "the number of classes ({}) for feature {}. "
-                    "Check the metadata JSON file to see the classes "
-                    "and their order and consider there needs to be a weight "
-                    "for the <UNK> and <PAD> class too.".format(
-                        len(output_feature[LOSS]["class_weights"]), output_feature["num_classes"], output_feature[NAME]
-                    )
-                )
+        if (
+            isinstance(output_feature[LOSS]["class_weights"], (list, tuple))
+            and len(output_feature[LOSS]["class_weights"])
+            != output_feature["num_classes"]
+        ):
+            raise ValueError(
+                f'The length of class_weights ({len(output_feature[LOSS]["class_weights"])}) is not compatible with the number of classes ({output_feature["num_classes"]}) for feature {output_feature[NAME]}. Check the metadata JSON file to see the classes and their order and consider there needs to be a weight for the <UNK> and <PAD> class too.'
+            )
+
 
         if isinstance(output_feature[LOSS]["class_weights"], dict):
-            if feature_metadata["str2idx"].keys() != output_feature[LOSS]["class_weights"].keys():
+            if (
+                feature_metadata["str2idx"].keys()
+                != output_feature[LOSS]["class_weights"].keys()
+            ):
                 raise ValueError(
-                    "The class_weights keys ({}) are not compatible with "
-                    "the classes ({}) of feature {}. "
-                    "Check the metadata JSON file to see the classes "
-                    "and consider there needs to be a weight "
-                    "for the <UNK> and <PAD> class too.".format(
-                        output_feature[LOSS]["class_weights"].keys(),
-                        feature_metadata["str2idx"].keys(),
-                        output_feature[NAME],
-                    )
+                    f'The class_weights keys ({output_feature[LOSS]["class_weights"].keys()}) are not compatible with the classes ({feature_metadata["str2idx"].keys()}) of feature {output_feature[NAME]}. Check the metadata JSON file to see the classes and consider there needs to be a weight for the <UNK> and <PAD> class too.'
                 )
-            else:
-                class_weights = output_feature[LOSS]["class_weights"]
-                idx2str = feature_metadata["idx2str"]
-                class_weights_list = [class_weights[s] for s in idx2str]
-                output_feature[LOSS]["class_weights"] = class_weights_list
+
+            class_weights = output_feature[LOSS]["class_weights"]
+            idx2str = feature_metadata["idx2str"]
+            class_weights_list = [class_weights[s] for s in idx2str]
+            output_feature[LOSS]["class_weights"] = class_weights_list
 
     @staticmethod
     def calculate_overall_stats(predictions, targets, train_set_metadata):

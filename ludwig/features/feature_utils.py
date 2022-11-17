@@ -51,4 +51,4 @@ def sanitize(name):
 
 def compute_feature_hash(feature: dict) -> str:
     preproc_hash = hash_dict(feature.get(PREPROCESSING, {}))
-    return sanitize(feature[NAME]) + "_" + preproc_hash.decode("ascii")
+    return f"{sanitize(feature[NAME])}_" + preproc_hash.decode("ascii")

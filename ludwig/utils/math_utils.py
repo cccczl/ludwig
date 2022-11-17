@@ -78,25 +78,21 @@ def learning_rate_warmup_distributed(learning_rate, epoch, warmup_epochs, num_wo
     """
     if epoch >= warmup_epochs:
         return learning_rate
-    else:
-        epoch_adjusted = float(epoch) + (curr_step / steps_per_epoch)
-        return learning_rate / num_workers * (epoch_adjusted * (num_workers - 1) / warmup_epochs + 1)
+    epoch_adjusted = float(epoch) + (curr_step / steps_per_epoch)
+    return learning_rate / num_workers * (epoch_adjusted * (num_workers - 1) / warmup_epochs + 1)
 
 
 def learning_rate_warmup(learning_rate, epoch, warmup_epochs, curr_step, steps_per_epoch):
     if epoch >= warmup_epochs:
         return learning_rate
-    else:
-        global_curr_step = 1 + curr_step + epoch * steps_per_epoch
-        warmup_steps = warmup_epochs * steps_per_epoch
+    global_curr_step = 1 + curr_step + epoch * steps_per_epoch
+    warmup_steps = warmup_epochs * steps_per_epoch
 
-        warmup_percent_done = global_curr_step / warmup_steps
-        warmup_learning_rate = learning_rate * warmup_percent_done
+    warmup_percent_done = global_curr_step / warmup_steps
+    warmup_learning_rate = learning_rate * warmup_percent_done
 
-        is_warmup = int(global_curr_step < warmup_steps)
-        interpolated_learning_rate = (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate
-
-        return interpolated_learning_rate
+    is_warmup = int(global_curr_step < warmup_steps)
+    return (1.0 - is_warmup) * learning_rate + is_warmup * warmup_learning_rate
 
 
 def round2precision(val, precision: int = 0, which: str = ""):

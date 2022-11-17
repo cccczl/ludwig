@@ -110,7 +110,7 @@ def test_hyperopt_executor(sampler, executor, csv_filename, validate_output_feat
         hyperopt_sampler, output_feature, metric, split, **executor
     )
 
-    gpus = [i for i in range(torch.cuda.device_count())]
+    gpus = list(range(torch.cuda.device_count()))
     hyperopt_executor.execute(config, dataset=rel_path, gpus=gpus)
 
 
@@ -158,10 +158,25 @@ def test_hyperopt_run_hyperopt(csv_filename, samplers):
             output_feature_name
             + ".fc_layers": {
                 "type": "category",
-                "values": [[{"fc_size": 512}, {"fc_size": 256}], [{"fc_size": 512}], [{"fc_size": 256}]],
+                "values": [
+                    [{"fc_size": 512}, {"fc_size": 256}],
+                    [{"fc_size": 512}],
+                    [{"fc_size": 256}],
+                ],
             },
-            output_feature_name + ".fc_size": {"type": "int", "low": 32, "high": 256, "steps": 5},
-            output_feature_name + ".num_fc_layers": {"type": "int", "low": 1, "high": 5, "space": "linear", "steps": 4},
+            f"{output_feature_name}.fc_size": {
+                "type": "int",
+                "low": 32,
+                "high": 256,
+                "steps": 5,
+            },
+            f"{output_feature_name}.num_fc_layers": {
+                "type": "int",
+                "low": 1,
+                "high": 5,
+                "space": "linear",
+                "steps": 4,
+            },
         },
         "goal": "minimize",
         "output_feature": output_feature_name,
@@ -169,6 +184,7 @@ def test_hyperopt_run_hyperopt(csv_filename, samplers):
         "executor": {"type": "serial"},
         "sampler": {"type": samplers["type"], "num_samples": 2},
     }
+
 
     # add hyperopt parameter space to the config
     config["hyperopt"] = hyperopt_configs

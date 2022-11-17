@@ -20,8 +20,7 @@ from scipy.signal.windows import get_window
 
 def _pre_emphasize_data(data, emphasize_value=0.97):
     filter_window = np.asarray([1, -emphasize_value])
-    pre_emphasized_data = lfilter(filter_window, 1, data)
-    return pre_emphasized_data
+    return lfilter(filter_window, 1, data)
 
 
 def get_length_in_samp(sampling_rate_in_hz, length_in_s):
@@ -159,8 +158,7 @@ def _get_stft(
         data_transformation,
         zero_mean_offset,
     )
-    non_symmetric_stft = get_non_symmetric_data(stft)
-    return non_symmetric_stft
+    return get_non_symmetric_data(stft)
 
 
 def _short_time_fourier_transform(
@@ -192,8 +190,11 @@ def _preprocess_to_padded_matrix(data, window_length_in_samp, window_shift_in_sa
     for num_output_idx in range(num_output):
         start_idx = window_shift_in_samp * num_output_idx
         is_last_output = num_output_idx == num_output - 1
-        end_idx = start_idx + window_length_in_samp if not is_last_output else num_input
-        end_padded_idx = window_length_in_samp if not is_last_output else end_idx - start_idx
+        end_idx = num_input if is_last_output else start_idx + window_length_in_samp
+        end_padded_idx = (
+            end_idx - start_idx if is_last_output else window_length_in_samp
+        )
+
         window_data = data[start_idx:end_idx]
         if zero_mean_offset:
             window_data = window_data - np.mean(window_data)

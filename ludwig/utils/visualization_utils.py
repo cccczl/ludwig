@@ -291,8 +291,8 @@ def radar_chart(
     if title is not None:
         plt.title(title)
 
-    ground_truth = ground_truth[0:10]
-    predictions = [pred[0:10] for pred in predictions]
+    ground_truth = ground_truth[:10]
+    predictions = [pred[:10] for pred in predictions]
 
     gt_argsort = np.argsort(-ground_truth)  # sort deacreasing
     logger.info(gt_argsort)
@@ -329,7 +329,7 @@ def radar_chart(
     # ax.set_rscale('log')
 
     def draw_polygon(values, label, color="grey"):
-        points = [(x, y) for x, y in zip(t, values)]
+        points = list(zip(t, values))
         points.append(points[0])
         points = np.array(points)
 
@@ -376,10 +376,7 @@ def pie(ax, values, **kwargs):
     total = sum(values)
 
     def formatter(pct):
-        if pct > 0:
-            return f"{pct * total / 100:0.0f}\n({pct:0.1f}%)"
-        else:
-            return ""
+        return f"{pct * total / 100:0.0f}\n({pct:0.1f}%)" if pct > 0 else ""
 
     wedges, _, labels = ax.pie(values, autopct=formatter, **kwargs)
     return wedges
@@ -417,10 +414,10 @@ def donut(
 
     colors = []
     colors.extend(colors_tab20c[8:12])
-    colors.append(colors_set2[5])
-    colors.append(colors_set3[11])
-    colors.append(colors_set3[1])
-    colors.append(colors_pastel1[5])
+    colors.extend(
+        (colors_set2[5], colors_set3[11], colors_set3[1], colors_pastel1[5])
+    )
+
     colors.extend(colors_tab20c[4:8])
 
     inside_colors = [colors[x * 4] for x in range(len(inside_values))]
@@ -464,7 +461,7 @@ def donut(
     for i in list(set(outside_groups)):
         wedges.append(inside[i])
         labels.append(inside_labels[i])
-        for j in range(group_count[i]):
+        for _ in range(group_count[i]):
             wedges.append(outside[so_far])
             labels.append(outside_labels[so_far])
             so_far += 1

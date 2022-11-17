@@ -64,7 +64,7 @@ class TabNet(LudwigModule):
         # to get the shared blocks
         self.feature_transforms = torch.nn.ModuleList([FeatureTransformer(input_size, size + output_size, **kargs)])
         self.attentive_transforms = torch.nn.ModuleList([None])
-        for i in range(num_steps):
+        for _ in range(num_steps):
             self.feature_transforms.append(
                 FeatureTransformer(
                     input_size,
@@ -178,10 +178,9 @@ class FeatureBlock(LudwigModule):
         self.size = size
         units = size * 2 if apply_glu else size
 
-        if shared_fc_layer:
-            self.fc_layer = shared_fc_layer
-        else:
-            self.fc_layer = torch.nn.Linear(input_size, units, bias=False)
+        self.fc_layer = shared_fc_layer or torch.nn.Linear(
+            input_size, units, bias=False
+        )
 
         self.batch_norm = GhostBatchNormalization(
             units, virtual_batch_size=bn_virtual_bs, momentum=bn_momentum, epsilon=bn_epsilon
@@ -293,14 +292,12 @@ class FeatureTransformer(LudwigModule):
             if shared_fc_layers and n < len(shared_fc_layers):
                 # add shared blocks
                 self.blocks.append(FeatureBlock(input_size, size, **kwargs, shared_fc_layer=shared_fc_layers[n]))
+            elif n == 0:
+                # first block
+                self.blocks.append(FeatureBlock(input_size, size, **kwargs))
             else:
-                # build new blocks
-                if n == 0:
-                    # first block
-                    self.blocks.append(FeatureBlock(input_size, size, **kwargs))
-                else:
-                    # subsequent blocks
-                    self.blocks.append(FeatureBlock(size, size, **kwargs))
+                # subsequent blocks
+                self.blocks.append(FeatureBlock(size, size, **kwargs))
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         # shape notation

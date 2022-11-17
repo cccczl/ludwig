@@ -56,9 +56,9 @@ def run_api_experiment_separated_datasets(input_features, output_features, data_
     validation_df = data_df.drop(train_df.index).drop(test_df.index)
 
     basename, ext = os.path.splitext(data_csv)
-    train_fname = basename + ".train" + ext
-    val_fname = basename + ".validation" + ext
-    test_fname = basename + ".test" + ext
+    train_fname = f"{basename}.train{ext}"
+    val_fname = f"{basename}.validation{ext}"
+    test_fname = f"{basename}.test{ext}"
     output_dirs = []
 
     try:
@@ -178,7 +178,7 @@ def test_api_train_online(csv_filename):
     }
     model = LudwigModel(config)
 
-    for i in range(2):
+    for _ in range(2):
         model.train_online(dataset=data_csv)
     model.predict(dataset=data_csv)
 
@@ -240,11 +240,11 @@ def test_api_training_determinism(tmpdir):
     model_weights_2 = get_weights(model_2.model)
     model_weights_3 = get_weights(model_3.model)
 
-    divergence = False
-    for weight_1, weight_2 in zip(model_weights_1, model_weights_2):
-        if not torch.allclose(weight_1, weight_2):
-            divergence = True
-            break
+    divergence = any(
+        not torch.allclose(weight_1, weight_2)
+        for weight_1, weight_2 in zip(model_weights_1, model_weights_2)
+    )
+
     assert divergence, "model_1 and model_2 have identical weights with different seeds!"
 
     for weight_1, weight_3 in zip(model_weights_1, model_weights_3):

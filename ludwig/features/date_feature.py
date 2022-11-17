@@ -75,11 +75,7 @@ class DateFeatureMixin(BaseFeatureMixin):
                 "https://ludwig.ai/user_guide/#date-features-preprocessing"
             )
             fill_value = preprocessing_parameters["fill_value"]
-            if fill_value != "":
-                datetime_obj = parse(fill_value)
-            else:
-                datetime_obj = datetime.now()
-
+            datetime_obj = parse(fill_value) if fill_value != "" else datetime.now()
         yearday = datetime_obj.toordinal() - date(datetime_obj.year, 1, 1).toordinal() + 1
 
         midnight = datetime_obj.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -97,22 +93,18 @@ class DateFeatureMixin(BaseFeatureMixin):
             second_of_day,
         ]
 
-    def add_feature_data(
-        feature_config: Dict[str, Any],
-        input_df: DataFrame,
-        proc_df: Dict[str, DataFrame],
-        metadata: Dict[str, Any],
-        preprocessing_parameters: Dict[str, Any],
-        backend,  # Union[Backend, str]
-        skip_save_processed_input: bool,
-    ) -> None:
+    def add_feature_data(self, input_df: DataFrame, proc_df: Dict[str, DataFrame], metadata: Dict[str, Any], preprocessing_parameters: Dict[str, Any], backend, skip_save_processed_input: bool) -> None:
         datetime_format = preprocessing_parameters["datetime_format"]
-        proc_df[feature_config[PROC_COLUMN]] = backend.df_engine.map_objects(
-            input_df[feature_config[COLUMN]],
+        proc_df[self[PROC_COLUMN]] = backend.df_engine.map_objects(
+            input_df[self[COLUMN]],
             lambda x: np.array(
-                DateFeatureMixin.date_to_list(x, datetime_format, preprocessing_parameters), dtype=np.int16
+                DateFeatureMixin.date_to_list(
+                    x, datetime_format, preprocessing_parameters
+                ),
+                dtype=np.int16,
             ),
         )
+
         return proc_df
 
 
@@ -122,16 +114,12 @@ class DateInputFeature(DateFeatureMixin, InputFeature):
     def __init__(self, feature, encoder_obj=None):
         super().__init__(feature)
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs):
         assert isinstance(inputs, torch.Tensor)
         assert inputs.dtype in [torch.int16, torch.int32, torch.int64]
-        inputs_encoded = self.encoder_obj(inputs)
-        return inputs_encoded
+        return self.encoder_obj(inputs)
 
     @property
     def input_dtype(self):

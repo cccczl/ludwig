@@ -46,6 +46,6 @@ class SantanderValuePrediction(CSVLoadMixin, IdentityProcessMixin, KaggleDownloa
         super().process_downloaded_dataset()
         processed_df = pd.read_csv(os.path.join(self.processed_dataset_path, self.csv_filename))
         # Ensure feature column names are strings (some are numeric); keep special names as is
-        processed_df.columns = ["C" + str(col) for col in processed_df.columns]
+        processed_df.columns = [f"C{str(col)}" for col in processed_df.columns]
         processed_df.rename(columns={"CID": "ID", "Ctarget": "target", "Csplit": "split"}, inplace=True)
         processed_df.to_csv(os.path.join(self.processed_dataset_path, self.csv_filename), index=False)

@@ -277,8 +277,16 @@ def test_hyperopt_run_hyperopt(csv_filename, ray_mock_dir):
                 "lower": 0.001,
                 "upper": 0.1,
             },
-            output_feature_name + ".fc_size": {"space": "randint", "lower": 32, "upper": 256},
-            output_feature_name + ".num_fc_layers": {"space": "randint", "lower": 2, "upper": 6},
+            f"{output_feature_name}.fc_size": {
+                "space": "randint",
+                "lower": 32,
+                "upper": 256,
+            },
+            f"{output_feature_name}.num_fc_layers": {
+                "space": "randint",
+                "lower": 2,
+                "upper": 6,
+            },
         },
         "goal": "minimize",
         "output_feature": output_feature_name,
@@ -286,6 +294,7 @@ def test_hyperopt_run_hyperopt(csv_filename, ray_mock_dir):
         "executor": {"type": "ray"},
         "sampler": {"type": "ray", "num_samples": 2},
     }
+
 
     # add hyperopt parameter space to the config
     config["hyperopt"] = hyperopt_configs

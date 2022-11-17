@@ -224,7 +224,7 @@ class Predictor(BasePredictor):
                     for i_feat in self.model.input_features.values()
                 }
                 outputs = activation_model(inputs)
-                collected_tensors = [(concat_name, tensor) for concat_name, tensor in outputs.items()]
+                collected_tensors = list(outputs.items())
 
                 progress_bar.update(1)
 
@@ -233,9 +233,7 @@ class Predictor(BasePredictor):
         return collected_tensors
 
     def is_coordinator(self):
-        if not self._horovod:
-            return True
-        return self._horovod.rank() == 0
+        return self._horovod.rank() == 0 if self._horovod else True
 
 
 class RemotePredictor(Predictor):
@@ -293,7 +291,7 @@ def save_evaluation_stats(test_stats, output_directory):
 
 def print_evaluation_stats(test_stats):
     for output_field, result in test_stats.items():
-        if output_field != COMBINED or (output_field == COMBINED and len(test_stats) > 2):
+        if output_field != COMBINED or len(test_stats) > 2:
             logger.info(f"\n===== {output_field} =====")
             for metric in sorted(list(result)):
                 if metric not in SKIP_EVAL_METRICS:
@@ -308,7 +306,10 @@ def print_evaluation_stats(test_stats):
 def get_output_columns(output_features):
     output_columns = []
     for of_name, feature in output_features.items():
-        for pred in feature.get_prediction_set():
-            if pred not in EXCLUDE_PRED_SET:
-                output_columns.append(f"{of_name}_{pred}")
+        output_columns.extend(
+            f"{of_name}_{pred}"
+            for pred in feature.get_prediction_set()
+            if pred not in EXCLUDE_PRED_SET
+        )
+
     return output_columns

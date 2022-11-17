@@ -164,18 +164,22 @@ class ForestCover(UncompressedFileDownloadMixin, CSVLoadMixin, BaseDataset):
             "Soil_Type_39",
             "Soil_Type_40",
         ]
-        st_vals = []
-        for _, row in df[st_cols].iterrows():
-            st_vals.append(row.to_numpy().nonzero()[0].item(0))
+        st_vals = [
+            row.to_numpy().nonzero()[0].item(0)
+            for _, row in df[st_cols].iterrows()
+        ]
+
         df = df.drop(columns=st_cols)
         df["Soil_Type"] = st_vals
 
         # Map the 4 wilderness areas to a single integer
         # instead of 4 binary columns
         wa_cols = ["Wilderness_Area_1", "Wilderness_Area_2", "Wilderness_Area_3", "Wilderness_Area_4"]
-        wa_vals = []
-        for _, row in df[wa_cols].iterrows():
-            wa_vals.append(row.to_numpy().nonzero()[0].item(0))
+        wa_vals = [
+            row.to_numpy().nonzero()[0].item(0)
+            for _, row in df[wa_cols].iterrows()
+        ]
+
         df = df.drop(columns=wa_cols)
         df["Wilderness_Area"] = wa_vals
 

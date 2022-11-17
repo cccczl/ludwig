@@ -112,9 +112,13 @@ class HorovodBackend(Backend):
             self.coordinator.register(hostname, node_id, rank)
         all_info = self.coordinator.finalize_registration()
 
-        setup_futures = []
-        for rank, local_cross_env_var in all_info.items():
-            setup_futures.append(worker_group.execute_single_async(rank, update_env_vars, local_cross_env_var))
+        setup_futures = [
+            worker_group.execute_single_async(
+                rank, update_env_vars, local_cross_env_var
+            )
+            for rank, local_cross_env_var in all_info.items()
+        ]
+
         ray.get(setup_futures)
 
         coordinator_envs = self.coordinator.establish_rendezvous()

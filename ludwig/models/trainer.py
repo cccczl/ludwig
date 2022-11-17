@@ -360,7 +360,7 @@ class Trainer(BaseTrainer):
             return
 
         # combined loss
-        loss_tag = "{}/step_training_loss".format("combined")
+        loss_tag = 'combined/step_training_loss'
         train_summary_writer.add_scalar(loss_tag, combined_loss, global_step=step)
 
         # all other losses

@@ -36,8 +36,7 @@ class FeedForwardAttentionReducer(LudwigModule):
         hidden = self.fc_layer1_activation(hidden)
         hidden = self.fc_layer2(hidden)  # [b, s, 1]
         attention = F.softmax(hidden, dim=1)
-        gated_inputs = torch.sum(attention * inputs, dim=1)
-        return gated_inputs  # [b, h]
+        return torch.sum(attention * inputs, dim=1)
 
 
 class MultiHeadSelfAttention(LudwigModule):
@@ -79,8 +78,7 @@ class MultiHeadSelfAttention(LudwigModule):
         outputs, weights = self.attention(query, key, value, mask=mask)
         outputs = torch.permute(outputs, (0, 2, 1, 3))  # (batch_size, seq_len, num_heads, projection_dim)
         concat_outputs = torch.reshape(outputs, (batch_size, -1, self.embedding_size))  # (batch_size, seq_len, h)
-        projected_outputs = self.combine_heads(concat_outputs)  # (batch_size, seq_len, h)
-        return projected_outputs
+        return self.combine_heads(concat_outputs)
 
     @property
     def output_shape(self):

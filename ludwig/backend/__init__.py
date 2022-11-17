@@ -82,10 +82,11 @@ def create_backend(type, **kwargs):
     if isinstance(type, Backend):
         return type
 
-    if type is None and _has_ray():
-        type = RAY
-    elif type is None and has_horovodrun():
-        type = HOROVOD
+    if type is None:
+        if _has_ray():
+            type = RAY
+        elif has_horovodrun():
+            type = HOROVOD
 
     return backend_registry[type](**kwargs)
 

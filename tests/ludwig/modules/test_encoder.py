@@ -35,8 +35,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def create_encoder(encoder_type, **encoder_kwargs):
-    encoder = encoder_type(**encoder_kwargs)
-    return encoder
+    return encoder_type(**encoder_kwargs)
 
 
 def _generate_image(image_size):
@@ -262,6 +261,9 @@ def test_sequence_encoders(encoder_type: Encoder, trainable: bool, reduce_output
         max_len=max_len,
     )
 
+    # todo figure out the output size for parallel 1d conv
+    output_shape = [num_sentences, fc_size]
+
     encoder_kwargs = {
         "embedding_size": embedding_size,
         "vocab": vocab,
@@ -270,17 +272,13 @@ def test_sequence_encoders(encoder_type: Encoder, trainable: bool, reduce_output
         "filter_size": 3,
         "num_filters": 8,
         "state_size": fc_size,
+        "embeddings_trainable": trainable,
+        "dropout": DROPOUT,
+        "recurrent_dropout": DROPOUT,
+        "fc_dropout": DROPOUT,
+        "reduce_output": reduce_output,
     }
 
-    # todo figure out the output size for parallel 1d conv
-    output_shape = [num_sentences, fc_size]
-
-    encoder_kwargs["embeddings_trainable"] = trainable
-    encoder_kwargs["dropout"] = DROPOUT
-    encoder_kwargs["dropout"] = DROPOUT
-    encoder_kwargs["recurrent_dropout"] = DROPOUT
-    encoder_kwargs["fc_dropout"] = DROPOUT
-    encoder_kwargs["reduce_output"] = reduce_output
     encoder = create_encoder(encoder_type, max_sequence_length=max_len, **encoder_kwargs)
 
     encoder_test(

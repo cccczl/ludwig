@@ -86,7 +86,10 @@ def preprocess_stores(df, stores_df):
     df = df.join(stores_df, on="Store", rsuffix="_right")
     df = df.drop(["Store_right"], axis=1)
 
-    promo2_start_months = [(s.split(",") if not pd.isnull(s) else []) for s in df["PromoInterval"]]
+    promo2_start_months = [
+        [] if pd.isnull(s) else s.split(",") for s in df["PromoInterval"]
+    ]
+
 
     for month_abbr in month_abbrs:
         df["Promo2Start_" + month_abbr] = np.array(

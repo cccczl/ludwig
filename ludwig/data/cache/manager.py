@@ -96,7 +96,6 @@ class CacheManager:
                 TEST: self.get_cache_path(dataset, key, TEST),
                 VALIDATION: self.get_cache_path(dataset, key, VALIDATION),
             }
-            return DatasetCache(config, key, cache_map, self._dataset_manager)
         else:
             key = self.get_cache_key(training_set, config)
             cache_map = {
@@ -105,13 +104,15 @@ class CacheManager:
                 TEST: self.get_cache_path(test_set, key, TEST),
                 VALIDATION: self.get_cache_path(validation_set, key, VALIDATION),
             }
-            return DatasetCache(config, key, cache_map, self._dataset_manager)
+
+        return DatasetCache(config, key, cache_map, self._dataset_manager)
 
     def get_cache_key(self, dataset, config):
-        if not isinstance(dataset, str):
-            # TODO(travis): could try hashing the in-memory dataset, but this is tricky for Dask
-            return str(uuid.uuid1())
-        return calculate_checksum(dataset, config)
+        return (
+            calculate_checksum(dataset, config)
+            if isinstance(dataset, str)
+            else str(uuid.uuid1())
+        )
 
     def get_cache_path(self, dataset, key, tag, ext=None):
         if not isinstance(dataset, str):
@@ -131,9 +132,7 @@ class CacheManager:
 
     def get_cache_directory(self, input_fname):
         if self._cache_dir is None:
-            if input_fname is not None:
-                return os.path.dirname(input_fname)
-            return "."
+            return os.path.dirname(input_fname) if input_fname is not None else "."
         return self._cache_dir
 
     def can_cache(self, skip_save_processed_input):

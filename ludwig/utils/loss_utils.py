@@ -3,8 +3,7 @@ import torch
 
 def rmspe_loss(targets: torch.Tensor, predictions: torch.Tensor) -> torch.Tensor:
     """Root mean square percentage error."""
-    loss = torch.sqrt(torch.mean(((targets - predictions).float() / targets) ** 2))
-    return loss
+    return torch.sqrt(torch.mean(((targets - predictions).float() / targets) ** 2))
 
 
 def mean_confidence_penalty(probabilities: torch.Tensor, num_classes: int) -> torch.Tensor:

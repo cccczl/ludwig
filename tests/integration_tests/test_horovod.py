@@ -41,9 +41,7 @@ def _nccl_available():
 
     try:
         return nccl_built()
-    except AttributeError:
-        return False
-    except RuntimeError:
+    except (AttributeError, RuntimeError):
         return False
 
 

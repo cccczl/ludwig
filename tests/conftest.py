@@ -26,16 +26,14 @@ from tests.integration_tests.utils import category_feature, generate_data, text_
 def csv_filename():
     """Yields a csv filename for holding temporary data."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        csv_filename = os.path.join(tmpdir, uuid.uuid4().hex[:10].upper() + ".csv")
-        yield csv_filename
+        yield os.path.join(tmpdir, f"{uuid.uuid4().hex[:10].upper()}.csv")
 
 
 @pytest.fixture()
 def yaml_filename():
     """Yields a yaml filename for holding a temporary config."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        yaml_filename = os.path.join(tmpdir, "model_def_" + uuid.uuid4().hex[:10].upper() + ".yaml")
-        yield yaml_filename
+        yield os.path.join(tmpdir, f"model_def_{uuid.uuid4().hex[:10].upper()}.yaml")
 
 
 @pytest.fixture(scope="module")
@@ -48,7 +46,7 @@ def hyperopt_results():
 
     output_features = [category_feature(vocab_size=2, reduce_input="sum")]
 
-    csv_filename = uuid.uuid4().hex[:10].upper() + ".csv"
+    csv_filename = f"{uuid.uuid4().hex[:10].upper()}.csv"
     rel_path = generate_data(input_features, output_features, csv_filename)
 
     config = {
@@ -69,8 +67,19 @@ def hyperopt_results():
                 "space": "log",
                 "steps": 3,
             },
-            output_feature_name + ".fc_size": {"type": "int", "low": 32, "high": 256, "steps": 5},
-            output_feature_name + ".num_fc_layers": {"type": "int", "low": 1, "high": 5, "space": "linear", "steps": 4},
+            f"{output_feature_name}.fc_size": {
+                "type": "int",
+                "low": 32,
+                "high": 256,
+                "steps": 5,
+            },
+            f"{output_feature_name}.num_fc_layers": {
+                "type": "int",
+                "low": 1,
+                "high": 5,
+                "space": "linear",
+                "steps": 4,
+            },
         },
         "goal": "minimize",
         "output_feature": output_feature_name,
@@ -78,6 +87,7 @@ def hyperopt_results():
         "executor": {"type": "serial"},
         "sampler": {"type": "random", "num_samples": 2},
     }
+
 
     # add hyperopt parameter space to the config
     config["hyperopt"] = hyperopt_configs

@@ -130,16 +130,25 @@ def random_string(length=5):
 
 
 def numerical_feature(normalization=None, **kwargs):
-    feature = {"name": "num_" + random_string(), "type": "numerical", "preprocessing": {"normalization": normalization}}
-    feature.update(kwargs)
+    feature = {
+        "name": "num_" + random_string(),
+        "type": "numerical",
+        "preprocessing": {"normalization": normalization},
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def category_feature(**kwargs):
-    feature = {"type": "category", "name": "category_" + random_string(), "vocab_size": 10, "embedding_size": 5}
-    feature.update(kwargs)
+    feature = {
+        "type": "category",
+        "name": "category_" + random_string(),
+        "vocab_size": 10,
+        "embedding_size": 5,
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
@@ -154,16 +163,22 @@ def text_feature(**kwargs):
         "max_len": 7,
         "embedding_size": 8,
         "state_size": 8,
-    }
-    feature.update(kwargs)
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def set_feature(**kwargs):
-    feature = {"type": "set", "name": "set_" + random_string(), "vocab_size": 10, "max_len": 5, "embedding_size": 5}
-    feature.update(kwargs)
+    feature = {
+        "type": "set",
+        "name": "set_" + random_string(),
+        "vocab_size": 10,
+        "max_len": 5,
+        "embedding_size": 5,
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
@@ -181,8 +196,8 @@ def sequence_feature(**kwargs):
         "state_size": 8,
         "num_filters": 8,
         "hidden_size": 8,
-    }
-    feature.update(kwargs)
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
@@ -193,13 +208,18 @@ def image_feature(folder, **kwargs):
         "type": "image",
         "name": "image_" + random_string(),
         "encoder": "resnet",
-        "preprocessing": {"in_memory": True, "height": 12, "width": 12, "num_channels": 3},
+        "preprocessing": {
+            "in_memory": True,
+            "height": 12,
+            "width": 12,
+            "num_channels": 3,
+        },
         "resnet_size": 8,
         "destination_folder": folder,
         "fc_size": 8,
         "num_filters": 8,
-    }
-    feature.update(kwargs)
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
@@ -221,37 +241,56 @@ def audio_feature(folder, **kwargs):
         "encoder": "stacked_cnn",
         "should_embed": False,
         "conv_layers": [
-            {"filter_size": 400, "pool_size": 16, "num_filters": 32, "regularize": "false"},
-            {"filter_size": 40, "pool_size": 10, "num_filters": 64, "regularize": "false"},
+            {
+                "filter_size": 400,
+                "pool_size": 16,
+                "num_filters": 32,
+                "regularize": "false",
+            },
+            {
+                "filter_size": 40,
+                "pool_size": 10,
+                "num_filters": 64,
+                "regularize": "false",
+            },
         ],
         "fc_size": 256,
         "destination_folder": folder,
-    }
-    feature.update(kwargs)
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def timeseries_feature(**kwargs):
-    feature = {"name": "timeseries_" + random_string(), "type": "timeseries", "max_len": 7}
-    feature.update(kwargs)
+    feature = {
+        "name": "timeseries_" + random_string(),
+        "type": "timeseries",
+        "max_len": 7,
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def binary_feature(**kwargs):
-    feature = {"name": "binary_" + random_string(), "type": "binary"}
-    feature.update(kwargs)
+    feature = {"name": "binary_" + random_string(), "type": "binary"} | kwargs
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def bag_feature(**kwargs):
-    feature = {"name": "bag_" + random_string(), "type": "bag", "max_len": 5, "vocab_size": 10, "embedding_size": 5}
-    feature.update(kwargs)
+    feature = {
+        "name": "bag_" + random_string(),
+        "type": "bag",
+        "max_len": 5,
+        "vocab_size": 10,
+        "embedding_size": 5,
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
@@ -261,25 +300,30 @@ def date_feature(**kwargs):
     feature = {
         "name": "date_" + random_string(),
         "type": "date",
-        "preprocessing": {"datetime_format": random.choice(list(DATETIME_FORMATS.keys()))},
-    }
-    feature.update(kwargs)
+        "preprocessing": {
+            "datetime_format": random.choice(list(DATETIME_FORMATS.keys()))
+        },
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def h3_feature(**kwargs):
-    feature = {"name": "h3_" + random_string(), "type": "h3"}
-    feature.update(kwargs)
+    feature = {"name": "h3_" + random_string(), "type": "h3"} | kwargs
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
 
 
 def vector_feature(**kwargs):
-    feature = {"type": VECTOR, "vector_size": 5, "name": "vector_" + random_string()}
-    feature.update(kwargs)
+    feature = {
+        "type": VECTOR,
+        "vector_size": 5,
+        "name": "vector_" + random_string(),
+    } | kwargs
+
     feature[COLUMN] = feature[NAME]
     feature[PROC_COLUMN] = compute_feature_hash(feature)
     return feature
@@ -324,8 +368,7 @@ def run_experiment(
             "skip_collect_overall_stats": True,
             "skip_save_log": True,
             "output_directory": tmpdir,
-        }
-        args.update(kwargs)
+        } | kwargs
 
         experiment_cli(**args)
 

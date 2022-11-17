@@ -106,7 +106,7 @@ class ALBERTEncoder(Encoder):
             self.transformer = AlbertModel(config)
 
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         if trainable:
             self.transformer.train()
@@ -227,7 +227,7 @@ class MT5Encoder(Encoder):
             self.transformer = MT5EncoderModel(config)
 
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         if trainable:
             self.transformer.train()
@@ -318,7 +318,7 @@ class XLMRoBERTaEncoder(Encoder):
             self.transformer = XLMRobertaModel(config, add_pooling_layer)
 
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         if trainable:
             self.transformer.train()
@@ -434,7 +434,7 @@ class BERTEncoder(Encoder):
             self.transformer = BertModel(config)
 
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         if trainable:
             self.transformer.train()
@@ -858,7 +858,7 @@ class RoBERTaEncoder(Encoder):
         if trainable:
             self.transformer.train()
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         self.transformer.trainable = trainable
         self.transformer.resize_token_embeddings(vocab_size)
@@ -1405,7 +1405,7 @@ class CamemBERTEncoder(Encoder):
         if trainable:
             self.transformer.train()
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         self.transformer.resize_token_embeddings(vocab_size)
         self.max_sequence_length = max_sequence_length
@@ -1827,7 +1827,7 @@ class LongformerEncoder(Encoder):
             config = LongformerConfig(attention_window, sep_token_id, **kwargs)
             self.transformer = LongformerModel(config)
         self.reduce_output = reduce_output
-        if not self.reduce_output == "cls_pooled":
+        if self.reduce_output != "cls_pooled":
             self.reduce_sequence = SequenceReducer(reduce_mode=reduce_output)
         if trainable:
             self.transformer.train()

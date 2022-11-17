@@ -425,10 +425,7 @@ def get_initial_validation_value(metric: str) -> float:
 
 
 def get_best_function(metric: str) -> Callable:
-    if metric_registry[metric].get_objective() == MINIMIZE:
-        return min
-    else:
-        return max
+    return min if metric_registry[metric].get_objective() == MINIMIZE else max
 
 
 def accuracy(preds: Tensor, target: Tensor) -> Tensor:

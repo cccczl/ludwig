@@ -27,7 +27,10 @@ for model_id in list_of_model_ids:
     print(">>>> training: ", model_id)
 
     # Define Ludwig model object that drive model training
-    model = LudwigModel(config="./" + model_id + "_config.yaml", logging_level=logging.WARN)
+    model = LudwigModel(
+        config=f"./{model_id}_config.yaml", logging_level=logging.WARN
+    )
+
 
     # initiate model training
     train_stats, _, _ = model.train(dataset=training_set, experiment_name="multiple_experiment", model_name=model_id)

@@ -70,7 +70,7 @@ def allocate_experiment_resources(resources: dict) -> dict:
     experiment_resources = {"cpu_resources_per_trial": 1}
     gpu_count, cpu_count = resources["gpu"], resources["cpu"]
     if gpu_count > 0:
-        experiment_resources.update({"gpu_resources_per_trial": 1})
+        experiment_resources["gpu_resources_per_trial"] = 1
         if cpu_count > 1:
             cpus_per_trial = max(int(cpu_count / gpu_count), 1)
             experiment_resources["cpu_resources_per_trial"] = cpus_per_trial
@@ -122,8 +122,6 @@ def _create_default_config(
     feature_types = [[feat["type"] for feat in features] for features in input_and_output_feature_config.values()]
     feature_types = set(sum(feature_types, []))
 
-    model_configs = {}
-
     # read in base config and update with experiment resources
     base_automl_config = load_yaml(BASE_AUTOML_CONFIG)
     base_automl_config["hyperopt"]["executor"].update(experiment_resources)
@@ -133,8 +131,7 @@ def _create_default_config(
     base_automl_config["hyperopt"]["sampler"]["search_alg"]["random_state_seed"] = random_seed
     base_automl_config.update(input_and_output_feature_config)
 
-    model_configs["base_config"] = base_automl_config
-
+    model_configs = {"base_config": base_automl_config}
     # read in all encoder configs
     for feat_type, default_configs in encoder_defaults.items():
         if feat_type in feature_types:
@@ -154,8 +151,7 @@ def _create_default_config(
 
 # Read in the score and configuration of a reference model trained by Ludwig for each dataset in a list.
 def _get_reference_configs() -> dict:
-    reference_configs = load_yaml(REFERENCE_CONFIGS)
-    return reference_configs
+    return load_yaml(REFERENCE_CONFIGS)
 
 
 def get_dataset_info(dataset: Union[str, pd.DataFrame, dd.core.DataFrame]) -> DatasetInfo:
@@ -312,10 +308,12 @@ def infer_type(
     if num_distinct_values == 0:
         return CATEGORY
     distinct_values = field.distinct_values
-    if num_distinct_values <= 2 and missing_value_percent == 0:
-        # Check that all distinct values are conventional bools.
-        if strings_utils.are_conventional_bools(distinct_values):
-            return BINARY
+    if (
+        num_distinct_values <= 2
+        and missing_value_percent == 0
+        and strings_utils.are_conventional_bools(distinct_values)
+    ):
+        return BINARY
 
     if field.image_values >= 3:
         return IMAGE
@@ -331,12 +329,7 @@ def infer_type(
         return CATEGORY
 
     # Use numerical if all of the distinct values are numerical.
-    if strings_utils.are_all_numericals(distinct_values):
-        return NUMERICAL
-
-    # TODO (ASN): add other modalities (image, etc. )
-    # Fallback to TEXT.
-    return TEXT
+    return NUMERICAL if strings_utils.are_all_numericals(distinct_values) else TEXT
 
 
 def should_exclude(idx: int, field: FieldInfo, dtype: str, row_count: int, targets: Set[str]) -> bool:
@@ -361,6 +354,4 @@ def should_exclude(idx: int, field: FieldInfo, dtype: str, row_count: int, targe
 def infer_mode(field: FieldInfo, targets: Set[str] = None) -> str:
     if field.name in targets:
         return "output"
-    if field.name.lower() == "split":
-        return "split"
-    return "input"
+    return "split" if field.name.lower() == "split" else "input"

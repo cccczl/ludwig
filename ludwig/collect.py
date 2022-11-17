@@ -162,7 +162,10 @@ def collect_weights(
 def save_tensors(collected_tensors, output_directory):
     filenames = []
     for tensor_name, tensor_value in collected_tensors:
-        np_filename = os.path.join(output_directory, make_safe_filename(tensor_name) + ".npy")
+        np_filename = os.path.join(
+            output_directory, f"{make_safe_filename(tensor_name)}.npy"
+        )
+
         np.save(np_filename, tensor_value.detach().cpu().numpy())
         filenames.append(np_filename)
     return filenames

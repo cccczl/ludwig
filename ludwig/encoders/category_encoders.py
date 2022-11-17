@@ -62,8 +62,7 @@ class CategoricalEmbedEncoder(Encoder):
 
         :param return: embeddings of shape [batch x embed size], type torch.float32
         """
-        embedded = self.embed(inputs)
-        return embedded
+        return self.embed(inputs)
 
     @property
     def output_shape(self) -> torch.Size:
@@ -110,8 +109,7 @@ class CategoricalSparseEncoder(Encoder):
 
         :param return: embeddings of shape [batch x embed size], type torch.float32
         """
-        embedded = self.embed(inputs)
-        return embedded
+        return self.embed(inputs)
 
     @property
     def output_shape(self) -> torch.Size:

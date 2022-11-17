@@ -85,7 +85,7 @@ def test_torchscript(csv_filename, should_load_model):
             text_feature(vocab_size=3),
         ]
 
-        predictions_column_name = "{}_predictions".format(output_features[0]["name"])
+        predictions_column_name = f'{output_features[0]["name"]}_predictions'
 
         # Generate test data
         data_csv_path = generate_data(input_features, output_features, data_csv_path)

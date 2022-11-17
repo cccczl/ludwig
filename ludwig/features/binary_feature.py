@@ -149,10 +149,7 @@ class BinaryInputFeature(BinaryFeatureMixin, InputFeature):
     def __init__(self, feature, encoder_obj=None):
         super().__init__(feature)
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs):
         assert isinstance(inputs, torch.Tensor)
@@ -244,9 +241,8 @@ class BinaryOutputFeature(BinaryFeatureMixin, OutputFeature):
 
     @staticmethod
     def calculate_overall_stats(predictions, targets, train_set_metadata):
-        overall_stats = {}
         confusion_matrix = ConfusionMatrix(targets, predictions[PREDICTIONS], labels=["False", "True"])
-        overall_stats["confusion_matrix"] = confusion_matrix.cm.tolist()
+        overall_stats = {"confusion_matrix": confusion_matrix.cm.tolist()}
         overall_stats["overall_stats"] = confusion_matrix.stats()
         overall_stats["per_class_stats"] = confusion_matrix.per_class_stats()
         fpr, tpr, thresholds = roc_curve(targets, predictions[PROBABILITIES])
@@ -285,12 +281,11 @@ class BinaryOutputFeature(BinaryFeatureMixin, OutputFeature):
             class_names = metadata["bool2str"]
 
         predictions_col = f"{self.feature_name}_{PREDICTIONS}"
-        if predictions_col in result:
-            if "bool2str" in metadata:
-                result[predictions_col] = backend.df_engine.map_objects(
-                    result[predictions_col],
-                    lambda pred: metadata["bool2str"][pred],
-                )
+        if predictions_col in result and "bool2str" in metadata:
+            result[predictions_col] = backend.df_engine.map_objects(
+                result[predictions_col],
+                lambda pred: metadata["bool2str"][pred],
+            )
 
         probabilities_col = f"{self.feature_name}_{PROBABILITIES}"
         if probabilities_col in result:

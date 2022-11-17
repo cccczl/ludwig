@@ -270,8 +270,7 @@ def legacy_train_fn(
             training_set_metadata,
         )
 
-    results = trainer.train(train_shard, val_shard, test_shard, **kwargs)
-    return results
+    return trainer.train(train_shard, val_shard, test_shard, **kwargs)
 
 
 class RayLegacyTrainer(BaseTrainer):
@@ -294,7 +293,7 @@ class RayLegacyTrainer(BaseTrainer):
             test_set.pipeline(shuffle=False).split(n=len(workers), locality_hints=workers) if test_set else None
         )
 
-        results = self.executor.execute(
+        return self.executor.execute(
             lambda trainer: legacy_train_fn(
                 trainer,
                 model,
@@ -306,8 +305,6 @@ class RayLegacyTrainer(BaseTrainer):
                 **kwargs,
             )
         )
-
-        return results
 
     def train_online(self, model, *args, **kwargs):
         results = self.executor.execute(lambda trainer: trainer.train_online(model, *args, **kwargs))
@@ -399,6 +396,8 @@ class RayPredictor(BasePredictor):
     ):
         model_ref = ray.put(model)
 
+
+
         class BatchInferModel:
             def __init__(self):
                 model = ray.get(model_ref)
@@ -420,8 +419,7 @@ class RayPredictor(BasePredictor):
 
                 for output_feature in self.model.output_features.values():
                     predictions = output_feature.flatten(predictions)
-                ordered_predictions = predictions[self.output_columns]
-                return ordered_predictions
+                return predictions[self.output_columns]
 
             def _prepare_batch(self, batch: pd.DataFrame) -> Dict[str, np.ndarray]:
                 res = {c: batch[c].to_numpy() for c in self.features.keys()}
@@ -432,6 +430,7 @@ class RayPredictor(BasePredictor):
                         res[c] = res[c].reshape((-1, *reshape))
 
                 return res
+
 
         return BatchInferModel
 
@@ -461,11 +460,11 @@ class RayBackend(RemoteTrainingMixin, Backend):
 
     def create_trainer(self, model: ECD, **kwargs):
         executable_kwargs = {**kwargs, **self._pytorch_kwargs}
-        if not self._use_legacy:
-            return RayTrainerV2(model, self._horovod_kwargs, executable_kwargs)
-        else:
-            # TODO: deprecated 0.5
-            return RayLegacyTrainer(self._horovod_kwargs, executable_kwargs)
+        return (
+            RayLegacyTrainer(self._horovod_kwargs, executable_kwargs)
+            if self._use_legacy
+            else RayTrainerV2(model, self._horovod_kwargs, executable_kwargs)
+        )
 
     def create_predictor(self, model: ECD, **kwargs):
         executable_kwargs = {**kwargs, **self._pytorch_kwargs}

@@ -11,7 +11,12 @@ class WhyLogsCallback(Callback):
     def on_build_metadata_start(self, df, mode=None):
         def log_dataframe(df_aux):
             session = whylogs.get_or_create_session(self.path_to_config)
-            session.log_dataframe(df_aux, mode, tags={"stage": "build_metadata_start", "mode": mode if mode else ""})
+            session.log_dataframe(
+                df_aux,
+                mode,
+                tags={"stage": "build_metadata_start", "mode": mode or ""},
+            )
+
 
         if hasattr(df, "compute"):
             df.map_partitions(log_dataframe).compute()

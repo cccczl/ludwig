@@ -56,8 +56,7 @@ class Sarcos(UncompressedFileDownloadMixin, MultifileJoinProcessMixin, CSVLoadMi
     def read_file(self, filetype, filename, header=0):
         with open_file(os.path.join(self.raw_dataset_path, filename)) as f:
             mat = loadmat(f)
-        file_df = pd.DataFrame(mat[filename.split(".")[0]])
-        return file_df
+        return pd.DataFrame(mat[filename.split(".")[0]])
 
     def process_downloaded_dataset(self):
         super().process_downloaded_dataset()

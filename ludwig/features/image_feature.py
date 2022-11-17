@@ -174,33 +174,20 @@ class ImageFeatureMixin(BaseFeatureMixin):
 
             if img_num_channels != num_channels:
                 logger.warning(
-                    "Image has {} channels, where as {} "
-                    "channels are expected. Dropping/adding channels "
-                    "with 0s as appropriate".format(img_num_channels, num_channels)
+                    f"Image has {img_num_channels} channels, where as {num_channels} channels are expected. Dropping/adding channels with 0s as appropriate"
                 )
-        else:
-            # If the image isn't like the first image, raise exception
-            if img_num_channels != num_channels:
-                raise ValueError(
-                    "Image has {} channels, unlike the first image, which "
-                    "has {} channels. Make sure all the images have the same "
-                    "number of channels or use the num_channels property in "
-                    "image preprocessing".format(img_num_channels, num_channels)
-                )
+
+        elif img_num_channels != num_channels:
+            raise ValueError(
+                f"Image has {img_num_channels} channels, unlike the first image, which has {num_channels} channels. Make sure all the images have the same number of channels or use the num_channels property in image preprocessing"
+            )
+
 
         if img.shape[1] != img_height or img.shape[2] != img_width:
             raise ValueError(
-                "Images are not of the same size. "
-                "Expected size is {}, "
-                "current image size is {}."
-                "Images are expected to be all of the same size "
-                "or explicit image width and height are expected "
-                "to be provided. "
-                "Additional information: "
-                "https://ludwig-ai.github.io/ludwig-docs/user_guide/#image-features-preprocessing".format(
-                    [img_height, img_width, num_channels], img.shape
-                )
+                f"Images are not of the same size. Expected size is {[img_height, img_width, num_channels]}, current image size is {img.shape}.Images are expected to be all of the same size or explicit image width and height are expected to be provided. Additional information: https://ludwig-ai.github.io/ludwig-docs/user_guide/#image-features-preprocessing"
             )
+
 
         return img.numpy()
 
@@ -231,7 +218,9 @@ class ImageFeatureMixin(BaseFeatureMixin):
             first_image = read_image(first_img_entry)
 
         inferred_sample = None
-        if preprocessing_parameters[INFER_IMAGE_DIMENSIONS] and not (explicit_height_width and explicit_num_channels):
+        if preprocessing_parameters[INFER_IMAGE_DIMENSIONS] and (
+            not explicit_height_width or not explicit_num_channels
+        ):
             sample_size = min(len(input_feature_col), preprocessing_parameters[INFER_IMAGE_SAMPLE_SIZE])
             sample = []
             for img in input_feature_col.head(sample_size):
@@ -250,34 +239,34 @@ class ImageFeatureMixin(BaseFeatureMixin):
                 height = int(preprocessing_parameters[HEIGHT])
                 width = int(preprocessing_parameters[WIDTH])
             except ValueError as e:
-                raise ValueError("Image height and width must be set and have " "positive integer values: " + str(e))
+                raise ValueError(
+                    f"Image height and width must be set and have positive integer values: {str(e)}"
+                )
+
             if height <= 0 or width <= 0:
                 raise ValueError("Image height and width must be positive integers")
+        elif preprocessing_parameters[INFER_IMAGE_DIMENSIONS]:
+            should_resize = True
+
+            # assumed image format is channels first [channels, height, width]
+            height_avg = min(
+                sum(x.shape[1] for x in inferred_sample) / len(inferred_sample),
+                preprocessing_parameters[INFER_IMAGE_MAX_HEIGHT],
+            )
+            width_avg = min(
+                sum(x.shape[2] for x in inferred_sample) / len(inferred_sample),
+                preprocessing_parameters[INFER_IMAGE_MAX_WIDTH],
+            )
+
+            height, width = round(height_avg), round(width_avg)
+            logger.debug(f"Inferring height: {height} and width: {width}")
+        elif first_image is not None:
+            height, width = first_image.shape[0], first_image.shape[1]
         else:
-            # User hasn't specified height and width.
-            # Default to inferring from sample or first image.
-            if preprocessing_parameters[INFER_IMAGE_DIMENSIONS]:
-                should_resize = True
-
-                # assumed image format is channels first [channels, height, width]
-                height_avg = min(
-                    sum(x.shape[1] for x in inferred_sample) / len(inferred_sample),
-                    preprocessing_parameters[INFER_IMAGE_MAX_HEIGHT],
-                )
-                width_avg = min(
-                    sum(x.shape[2] for x in inferred_sample) / len(inferred_sample),
-                    preprocessing_parameters[INFER_IMAGE_MAX_WIDTH],
-                )
-
-                height, width = round(height_avg), round(width_avg)
-                logger.debug(f"Inferring height: {height} and width: {width}")
-            elif first_image is not None:
-                height, width = first_image.shape[0], first_image.shape[1]
-            else:
-                raise ValueError(
-                    "Explicit image width/height are not set, infer_image_dimensions is false, "
-                    "and first image cannot be read, so image dimensions are unknown"
-                )
+            raise ValueError(
+                "Explicit image width/height are not set, infer_image_dimensions is false, "
+                "and first image cannot be read, so image dimensions are unknown"
+            )
 
         if explicit_num_channels:
             # User specified num_channels in the model/feature config
@@ -413,8 +402,11 @@ class ImageFeatureMixin(BaseFeatureMixin):
             with upload_h5(data_fp) as h5_file:
                 # todo future add multiprocessing/multithreading
                 image_dataset = h5_file.create_dataset(
-                    feature_config[PROC_COLUMN] + "_data", (num_images, num_channels, height, width), dtype=np.uint8
+                    f"{feature_config[PROC_COLUMN]}_data",
+                    (num_images, num_channels, height, width),
+                    dtype=np.uint8,
                 )
+
                 for i, img_entry in enumerate(all_img_entries):
                     res = read_image_and_resize(img_entry)
                     image_dataset[i, :height, :width, :] = res if res is not None else default_image
@@ -434,10 +426,7 @@ class ImageInputFeature(ImageFeatureMixin, InputFeature):
     def __init__(self, feature, encoder_obj=None):
         super().__init__(feature)
         self.overwrite_defaults(feature)
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         assert isinstance(inputs, torch.Tensor)
@@ -446,9 +435,7 @@ class ImageInputFeature(ImageFeatureMixin, InputFeature):
         # casting and rescaling
         inputs = inputs.type(torch.float32) / 255
 
-        inputs_encoded = self.encoder_obj(inputs)
-
-        return inputs_encoded
+        return self.encoder_obj(inputs)
 
     @property
     def input_dtype(self):

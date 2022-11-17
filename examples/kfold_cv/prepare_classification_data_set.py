@@ -42,7 +42,7 @@ if r.status_code == 200:
 # create pandas dataframe from downloaded data
 print("Preparing data for training")
 raw_df = pd.read_csv(DATA_SET, header=None, sep=",", skipinitialspace=True)
-raw_df.columns = ["ID", "diagnosis"] + ["X" + str(i) for i in range(1, 31)]
+raw_df.columns = ["ID", "diagnosis"] + [f"X{str(i)}" for i in range(1, 31)]
 
 # convert diagnosis attribute to binary format
 raw_df["diagnosis"] = raw_df["diagnosis"].map({"M": 1, "B": 0})
@@ -56,7 +56,7 @@ test_df.to_csv(os.path.join(DATA_DIR, "test.csv"), index=False)
 
 print("Preparing Ludwig config")
 # Create ludwig input_features
-num_features = ["X" + str(i) for i in range(1, 31)]
+num_features = [f"X{str(i)}" for i in range(1, 31)]
 input_features = []
 
 # setup input features for numerical variables

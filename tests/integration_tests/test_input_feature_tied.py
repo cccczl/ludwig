@@ -50,9 +50,11 @@ InputFeatureOptions = namedtuple("InputFeatureOptions", "feature_type feature_op
 )
 def test_tied_micro_level(input_feature_options):
     # build input feature config
-    input_feature_configs = []
+    input_feature_configs = [
+        {"name": "input_feature_1", "type": input_feature_options.feature_type}
+    ]
 
-    input_feature_configs.append({"name": "input_feature_1", "type": input_feature_options.feature_type})
+
     if input_feature_options.feature_options is not None:
         input_feature_configs[0].update(input_feature_options.feature_options)
 

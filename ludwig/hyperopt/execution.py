@@ -107,14 +107,10 @@ class HyperoptExecutor(ABC):
     def get_metric_score_from_eval_stats(self, eval_stats) -> Union[float, list]:
         stats = eval_stats[self.output_feature]
         for metric_part in self.metric.split("."):
-            if isinstance(stats, dict):
-                if metric_part in stats:
-                    stats = stats[metric_part]
-                else:
-                    raise ValueError(f"Evaluation statistics do not contain " f"the metric {self.metric}")
+            if isinstance(stats, dict) and metric_part in stats:
+                stats = stats[metric_part]
             else:
                 raise ValueError(f"Evaluation statistics do not contain " f"the metric {self.metric}")
-
         if not isinstance(stats, float):
             raise ValueError(
                 f"The metric {self.metric} in " f"evaluation statistics is not " f"a numerical value: {stats}"
@@ -299,9 +295,9 @@ class RayTuneExecutor(HyperoptExecutor):
             raise ImportError("ray module is not installed. To " "install it,try running pip install ray")
         if not isinstance(hyperopt_sampler, RayTuneSampler):
             raise ValueError(
-                "Sampler {} is not compatible with RayTuneExecutor, "
-                "please use the RayTuneSampler".format(hyperopt_sampler)
+                f"Sampler {hyperopt_sampler} is not compatible with RayTuneExecutor, please use the RayTuneSampler"
             )
+
         HyperoptExecutor.__init__(self, hyperopt_sampler, output_feature, metric, split)
         if not ray.is_initialized():
             try:
@@ -355,7 +351,7 @@ class RayTuneExecutor(HyperoptExecutor):
             # that are not matched by '*' and '?' patterns.
             metadata_file += glob.glob(os.path.join(glob.escape(chkpt_dir), ".tune_metadata"))
             metadata_file = list(set(metadata_file))  # avoid duplication
-            if len(metadata_file) < 1:
+            if not metadata_file:
                 # Remove checkpoint marker on incomplete directory
                 os.remove(marker_path)
 
@@ -415,24 +411,31 @@ class RayTuneExecutor(HyperoptExecutor):
                 trial_dir=tune.get_trial_dir(),
             )
 
+
+
         class RayTuneReportCallback(Callback):
             def _get_sync_client_and_remote_checkpoint_dir(self) -> Optional[Tuple["CommandBasedClient", str]]:
                 # sync client has to be recreated to avoid issues with serialization
                 return tune_executor._get_sync_client_and_remote_checkpoint_dir(trial_dir)
 
             def on_trainer_train_setup(self, trainer, save_path):
-                if is_using_ray_backend and checkpoint_dir and trial_location != ray.util.get_node_ip_address():
-                    save_path = Path(save_path)
+                if (
+                    not is_using_ray_backend
+                    or not checkpoint_dir
+                    or trial_location == ray.util.get_node_ip_address()
+                ):
+                    return
+                save_path = Path(save_path)
 
-                    for path in trial_dir.glob("checkpoint*"):
-                        if path not in (save_path.parent, checkpoint_dir):
-                            shutil.rmtree(path, ignore_errors=True)
+                for path in trial_dir.glob("checkpoint*"):
+                    if path not in (save_path.parent, checkpoint_dir):
+                        shutil.rmtree(path, ignore_errors=True)
 
-                    sync_info = self._get_sync_client_and_remote_checkpoint_dir()
-                    if sync_info is not None:
-                        sync_client, remote_checkpoint_dir = sync_info
-                        sync_client.sync_down(remote_checkpoint_dir, str(trial_dir.absolute()))
-                        sync_client.wait()
+                sync_info = self._get_sync_client_and_remote_checkpoint_dir()
+                if sync_info is not None:
+                    sync_client, remote_checkpoint_dir = sync_info
+                    sync_client.sync_down(remote_checkpoint_dir, str(trial_dir.absolute()))
+                    sync_client.wait()
 
             def on_epoch_end(self, trainer, progress_tracker, save_path):
                 if is_using_ray_backend:
@@ -448,6 +451,7 @@ class RayTuneExecutor(HyperoptExecutor):
 
                 checkpoint(progress_tracker, save_path)
                 report(progress_tracker)
+
 
         callbacks = hyperopt_dict.get("callbacks") or []
         hyperopt_dict["callbacks"] = callbacks + [RayTuneReportCallback()]
@@ -726,10 +730,11 @@ class RayTuneExecutor(HyperoptExecutor):
                             gpu_memory_limit=gpu_memory_limit,
                             allow_parallel_threads=allow_parallel_threads,
                         )
-                        if best_model.config[TRAINING]["eval_batch_size"]:
-                            batch_size = best_model.config[TRAINING]["eval_batch_size"]
-                        else:
-                            batch_size = best_model.config[TRAINING]["batch_size"]
+                        batch_size = (
+                            best_model.config[TRAINING]["eval_batch_size"]
+                            or best_model.config[TRAINING]["batch_size"]
+                        )
+
                         try:
                             eval_stats, _, _ = best_model.evaluate(
                                 dataset=validation_set,

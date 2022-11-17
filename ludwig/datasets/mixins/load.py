@@ -26,13 +26,12 @@ def _split(data_df, split):
     if SPLIT in data_df:
         data_df[SPLIT] = pd.to_numeric(data_df[SPLIT])
     if split:
-        if SPLIT in data_df:
-            training_set = data_df[data_df[SPLIT] == 0].drop(columns=[SPLIT])
-            val_set = data_df[data_df[SPLIT] == 1].drop(columns=[SPLIT])
-            test_set = data_df[data_df[SPLIT] == 2].drop(columns=[SPLIT])
-            return training_set, test_set, val_set
-        else:
+        if SPLIT not in data_df:
             raise ValueError("The dataset does not have splits, " "load with `split=False`")
+        training_set = data_df[data_df[SPLIT] == 0].drop(columns=[SPLIT])
+        val_set = data_df[data_df[SPLIT] == 1].drop(columns=[SPLIT])
+        test_set = data_df[data_df[SPLIT] == 2].drop(columns=[SPLIT])
+        return training_set, test_set, val_set
     return data_df
 
 

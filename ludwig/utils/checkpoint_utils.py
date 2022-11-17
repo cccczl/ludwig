@@ -137,8 +137,7 @@ class CheckpointManager:
           The global iteration step. This is parsed from the latest
             checkpoint file if one is found, else 0 is returned.
         """
-        ckpts = get_files(self.directory, "*.ckpt")
-        if ckpts:
+        if ckpts := get_files(self.directory, "*.ckpt"):
             last_ckpt = ckpts[-1]
             status = self.checkpoint.restore(last_ckpt, self.device)
             if not status:
@@ -175,8 +174,7 @@ class CheckpointManager:
 
     @staticmethod
     def load_latest_checkpoint(checkpoint, directory, device):
-        ckpts = get_files(directory, "*.ckpt")
-        if ckpts:
+        if ckpts := get_files(directory, "*.ckpt"):
             last_ckpt = ckpts[-1]
             checkpoint.restore(last_ckpt, device)
         else:

@@ -58,10 +58,7 @@ def all_bool_strs():
 
 def make_safe_filename(s):
     def safe_char(c):
-        if c.isalnum():
-            return c
-        else:
-            return "_"
+        return c if c.isalnum() else "_"
 
     return "".join(safe_char(c) for c in s).rstrip("_")
 
@@ -80,7 +77,7 @@ def str2bool(v: str, fallback_true_label=None) -> bool:
         v: Value to get the bool representation for.
         fallback_true_label: (str) label to use as 'True'.
     """
-    v_str = str(v).lower()
+    v_str = v.lower()
     if v_str in BOOL_TRUE_STRS:
         return True
     if v_str in BOOL_FALSE_STRS:
@@ -112,10 +109,7 @@ def is_numerical(s: Union[str, int, float]):
 
 def are_all_numericals(values: List[Union[str, int, float]]):
     """Returns whether all values are numericals."""
-    for value in values:
-        if not is_numerical(value):
-            return False
-    return True
+    return all(is_numerical(value) for value in values)
 
 
 def is_integer(s: Union[str, int, float]):
@@ -150,8 +144,7 @@ def match_replace(string_to_match, list_regex):
     """
     matched = []
     for regex in list_regex:
-        match = re.search(regex[0], string_to_match)
-        if match:
+        if match := re.search(regex[0], string_to_match):
             string_to_match = re.sub(regex[0], regex[1], string_to_match)
             matched.append(regex[0].pattern)
     return string_to_match, matched
@@ -237,9 +230,11 @@ def create_vocabulary(
             vocab = tokenizer.tokenizer.get_vocab()
             vocab = list(vocab.keys())
         except NotImplementedError:
-            vocab = []
-            for idx in range(tokenizer.tokenizer.vocab_size):
-                vocab.append(tokenizer.tokenizer._convert_id_to_token(idx))
+            vocab = [
+                tokenizer.tokenizer._convert_id_to_token(idx)
+                for idx in range(tokenizer.tokenizer.vocab_size)
+            ]
+
             vocab += tokenizer.tokenizer.added_tokens_encoder.keys()
 
         pad_token = tokenizer.tokenizer.pad_token
@@ -280,10 +275,7 @@ def create_vocabulary(
     str2idx = {unit: i for i, unit in enumerate(vocab)}
     str2freq = {unit: unit_counts.get(unit) if unit in unit_counts else 0 for unit in vocab}
 
-    pad_idx = None
-    if padding_symbol in str2idx.keys():
-        pad_idx = str2idx[padding_symbol]
-
+    pad_idx = str2idx.get(padding_symbol)
     return vocab, str2idx, str2freq, max_line_length, pad_idx, padding_symbol, unknown_symbol
 
 
@@ -297,11 +289,10 @@ def _get_sequence_vector(
         curr_unit = unit_sequence[i]
         if tokenizer_type == "hf_tokenizer":
             unit_indices_vector[i] = curr_unit
+        elif curr_unit in unit_to_id:
+            unit_indices_vector[i] = unit_to_id[curr_unit]
         else:
-            if curr_unit in unit_to_id:
-                unit_indices_vector[i] = unit_to_id[curr_unit]
-            else:
-                unit_indices_vector[i] = unit_to_id[unknown_symbol]
+            unit_indices_vector[i] = unit_to_id[unknown_symbol]
 
     # Add start and stop symbols.
     # Huggingface's pretrained tokenizers take care of this implicitly:

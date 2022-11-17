@@ -30,10 +30,11 @@ class IterableBatcher(Batcher):
         if self.last_batch():
             raise StopIteration()
 
-        sub_batch = {}
         batch = next(self.data_it)
-        for features_name in self.dataset.features:
-            sub_batch[features_name] = self.dataset.get(features_name, batch)
+        sub_batch = {
+            features_name: self.dataset.get(features_name, batch)
+            for features_name in self.dataset.features
+        }
 
         self.step += 1
         return sub_batch

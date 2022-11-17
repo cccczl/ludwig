@@ -379,7 +379,7 @@ class ParallelCNN(Encoder):
             # generate num_conv_layers with default parameters
             self.conv_layers = None
             self.num_conv_layers = num_conv_layers
-        elif conv_layers is None and num_conv_layers is None:
+        elif conv_layers is None:
             # use default layers with varying filter sizes
             self.conv_layers = [{"filter_size": 2}, {"filter_size": 3}, {"filter_size": 4}, {"filter_size": 5}]
             self.num_conv_layers = 4
@@ -675,7 +675,7 @@ class StackedCNN(Encoder):
             # generate num_conv_layers with default parameters
             self.conv_layers = None
             self.num_conv_layers = num_conv_layers
-        elif conv_layers is None and num_conv_layers is None:
+        elif conv_layers is None:
             # use default layers with varying filter sizes
             self.conv_layers = [
                 {
@@ -1007,7 +1007,7 @@ class StackedParallelCNN(Encoder):
             # generate num_conv_layers with default parameters
             self.stacked_layers = None
             self.num_stacked_layers = num_stacked_layers
-        elif stacked_layers is None and num_stacked_layers is None:
+        elif stacked_layers is None:
             # use default layers with varying filter sizes
             self.stacked_layers = [
                 [{"filter_size": 2}, {"filter_size": 3}, {"filter_size": 4}, {"filter_size": 5}],
@@ -1536,7 +1536,7 @@ class StackedCNNRNN(Encoder):
             # generate num_conv_layers with default parameters
             self.conv_layers = None
             self.num_conv_layers = num_conv_layers
-        elif conv_layers is None and num_conv_layers is None:
+        elif conv_layers is None:
             # use default layers with varying filter sizes
             self.conv_layers = [{"pool_size": 3}, {"pool_size": None}]
             self.num_conv_layers = 2

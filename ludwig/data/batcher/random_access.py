@@ -44,9 +44,10 @@ class RandomAccessBatcher(Batcher):
             except StopIteration:
                 break
 
-        sub_batch = {}
-        for features_name in self.dataset.features:
-            sub_batch[features_name] = self.dataset.get(features_name, indices)
+        sub_batch = {
+            features_name: self.dataset.get(features_name, indices)
+            for features_name in self.dataset.features
+        }
 
         self.step += 1
         return sub_batch

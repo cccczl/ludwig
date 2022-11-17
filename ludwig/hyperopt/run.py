@@ -192,31 +192,26 @@ def hyperopt(
     if split == TRAINING:
         if training_set is None and (config["preprocessing"]["split_probabilities"][0] <= 0):
             raise ValueError(
-                'The data for the specified split for hyperopt "{}" '
-                "was not provided, "
-                "or the split amount specified in the preprocessing section "
-                "of the config is not greater than 0".format(split)
+                f'The data for the specified split for hyperopt "{split}" was not provided, or the split amount specified in the preprocessing section of the config is not greater than 0'
             )
+
     elif split == VALIDATION:
         if validation_set is None and (config["preprocessing"]["split_probabilities"][1] <= 0):
             raise ValueError(
-                'The data for the specified split for hyperopt "{}" '
-                "was not provided, "
-                "or the split amount specified in the preprocessing section "
-                "of the config is not greater than 0".format(split)
+                f'The data for the specified split for hyperopt "{split}" was not provided, or the split amount specified in the preprocessing section of the config is not greater than 0'
             )
+
     elif split == TEST:
         if test_set is None and (config["preprocessing"]["split_probabilities"][2] <= 0):
             raise ValueError(
-                'The data for the specified split for hyperopt "{}" '
-                "was not provided, "
-                "or the split amount specified in the preprocessing section "
-                "of the config is not greater than 0".format(split)
+                f'The data for the specified split for hyperopt "{split}" was not provided, or the split amount specified in the preprocessing section of the config is not greater than 0'
             )
+
     else:
         raise ValueError(
-            'unrecognized hyperopt split "{}". ' "Please provide one of: {}".format(split, {TRAINING, VALIDATION, TEST})
+            f'unrecognized hyperopt split "{split}". Please provide one of: {{TRAINING, VALIDATION, TEST}}'
         )
+
     if output_feature == COMBINED:
         if metric != LOSS:
             raise ValueError('The only valid metric for "combined" output feature is "loss"')
@@ -224,10 +219,9 @@ def hyperopt(
         output_feature_names = {of["name"] for of in config["output_features"]}
         if output_feature not in output_feature_names:
             raise ValueError(
-                'The output feature specified for hyperopt "{}" '
-                "cannot be found in the config. "
-                'Available ones are: {} and "combined"'.format(output_feature, output_feature_names)
+                f'The output feature specified for hyperopt "{output_feature}" cannot be found in the config. Available ones are: {output_feature_names} and "combined"'
             )
+
 
         output_feature_type = None
         for of in config["output_features"]:
@@ -239,12 +233,9 @@ def hyperopt(
             #  and per class metrics from the trainign stats and in general
             #  and potprocessed metric
             raise ValueError(
-                'The specified metric for hyperopt "{}" is not a valid metric '
-                'for the specified output feature "{}" of type "{}". '
-                "Available metrics are: {}".format(
-                    metric, output_feature, output_feature_type, feature_class.metric_functions.keys()
-                )
+                f'The specified metric for hyperopt "{metric}" is not a valid metric for the specified output feature "{output_feature}" of type "{output_feature_type}". Available metrics are: {feature_class.metric_functions.keys()}'
             )
+
 
     hyperopt_sampler = get_build_hyperopt_sampler(sampler[TYPE])(goal, parameters, **sampler)
 

@@ -204,21 +204,16 @@ class NumericalInputFeature(NumericalFeatureMixin, InputFeature):
         super().__init__(feature)
         self.overwrite_defaults(feature)
         feature["input_size"] = self.input_shape[-1]
-        if encoder_obj:
-            self.encoder_obj = encoder_obj
-        else:
-            self.encoder_obj = self.initialize_encoder(feature)
+        self.encoder_obj = encoder_obj or self.initialize_encoder(feature)
 
     def forward(self, inputs):
         assert isinstance(inputs, torch.Tensor)
-        assert inputs.dtype == torch.float32 or inputs.dtype == torch.float64
+        assert inputs.dtype in [torch.float32, torch.float64]
         assert len(inputs.shape) == 1 or (len(inputs.shape) == 2 and inputs.shape[1] == 1)
 
         if len(inputs.shape) == 1:
             inputs = inputs[:, None]
-        inputs_encoded = self.encoder_obj(inputs)
-
-        return inputs_encoded
+        return self.encoder_obj(inputs)
 
     def create_sample_input(self):
         # Used by get_model_inputs(), which is used for tracing-based torchscript generation.
@@ -273,16 +268,15 @@ class NumericalOutputFeature(NumericalFeatureMixin, OutputFeature):
         predictions = logits
 
         if self.clip is not None:
-            if isinstance(self.clip, (list, tuple)) and len(self.clip) == 2:
-                predictions = torch.clamp(logits, self.clip[0], self.clip[1])
-
-                logger.debug(f"  clipped_predictions: {predictions}")
-            else:
+            if not isinstance(self.clip, (list, tuple)) or len(self.clip) != 2:
                 raise ValueError(
-                    "The clip parameter of {} is {}. "
-                    "It must be a list or a tuple of length 2.".format(self.feature_name, self.clip)
+                    f"The clip parameter of {self.feature_name} is {self.clip}. It must be a list or a tuple of length 2."
                 )
 
+
+            predictions = torch.clamp(logits, self.clip[0], self.clip[1])
+
+            logger.debug(f"  clipped_predictions: {predictions}")
         return {PREDICTIONS: predictions, LOGITS: logits}
 
     def get_prediction_set(self):

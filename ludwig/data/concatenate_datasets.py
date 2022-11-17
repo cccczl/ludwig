@@ -66,9 +66,7 @@ def concatenate_df(train_df, vali_df, test_df, backend):
     def get_split(idx):
         if idx < train_size:
             return 0
-        if idx < train_size + vali_size:
-            return 1
-        return 2
+        return 1 if idx < train_size + vali_size else 2
 
     concatenated_df[SPLIT] = concatenated_df.index.to_series().map(get_split).astype(np.int8)
 

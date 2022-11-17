@@ -41,10 +41,10 @@ default_preprocessing_parameters = {
     "force_split": default_preprocessing_force_split,
     "split_probabilities": default_preprocessing_split_probabilities,
     "stratify": default_preprocessing_stratify,
+} | {
+    name: base_type.preprocessing_defaults()
+    for name, base_type in base_type_registry.items()
 }
-default_preprocessing_parameters.update(
-    {name: base_type.preprocessing_defaults() for name, base_type in base_type_registry.items()}
-)
 
 default_combiner_type = "concat"
 
@@ -118,7 +118,7 @@ def get_default_optimizer_params(optimizer_type):
     if optimizer_type in default_optimizer_params_registry:
         return default_optimizer_params_registry[optimizer_type]
     else:
-        raise ValueError("Incorrect optimizer type: " + optimizer_type)
+        raise ValueError(f"Incorrect optimizer type: {optimizer_type}")
 
 
 def _perform_sanity_checks(config):
@@ -206,10 +206,7 @@ def _merge_hyperopt_with_training(config: dict) -> None:
             "Unset one of these parameters in your config."
         )
     elif max_t is not None:
-        if time_attr == "time_total_s":
-            training["epochs"] = sys.maxsize  # essentially continue training until stopped
-        else:
-            training["epochs"] = max_t
+        training["epochs"] = sys.maxsize if time_attr == "time_total_s" else max_t
     elif epochs is not None:
         scheduler["max_t"] = epochs
 

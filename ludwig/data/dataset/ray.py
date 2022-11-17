@@ -43,7 +43,7 @@ class RayDataset(Dataset):
     """Wrapper around ray.data.Dataset."""
 
     def __init__(self, df: DataFrame, features: Dict[str, Dict], training_set_metadata: Dict[str, Any]):
-        self.ds = from_dask(df) if not isinstance(df, str) else read_parquet(df)
+        self.ds = read_parquet(df) if isinstance(df, str) else from_dask(df)
         self.features = features
         self.training_set_metadata = training_set_metadata
         self.data_hdf5_fp = training_set_metadata.get(DATA_TRAIN_HDF5_FP)
@@ -58,10 +58,7 @@ class RayDataset(Dataset):
     def pipeline(self, shuffle=True) -> DatasetPipeline:
         pipe = self.ds.repeat()
         if shuffle:
-            if _ray18:
-                pipe = pipe.random_shuffle_each_window()
-            else:
-                pipe = pipe.random_shuffle()
+            pipe = pipe.random_shuffle_each_window() if _ray18 else pipe.random_shuffle()
         return pipe
 
     @contextlib.contextmanager

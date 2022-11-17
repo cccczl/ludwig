@@ -78,7 +78,7 @@ def test_multiple_dependencies(reduce_dependencies, hidden_shape, dependent_hidd
 
     # Set up dependency reducers.
     dependency_reducers = torch.nn.ModuleDict()
-    for feature_name in other_dependencies.keys():
+    for feature_name in other_dependencies:
         dependency_reducers[feature_name] = SequenceReducer(reduce_mode=reduce_dependencies)
 
     # test dependency concatenation

@@ -48,12 +48,10 @@ def get_image_from_http_bytes(img_entry) -> BytesIO:
 
     data = requests.get(img_entry, stream=True)
     if data.status_code == 404:
-        upgraded = upgrade_http(img_entry)
-        if upgraded:
-            logger.info(f"reading image url {img_entry} failed. upgrading to https and retrying")
-            return get_image_from_http_bytes(upgraded)
-        else:
+        if not (upgraded := upgrade_http(img_entry)):
             raise requests.exceptions.HTTPError(f"reading image url {img_entry} failed and cannot be upgraded to https")
+        logger.info(f"reading image url {img_entry} failed. upgrading to https and retrying")
+        return get_image_from_http_bytes(upgraded)
     return BytesIO(data.raw.read())
 
 
@@ -63,19 +61,15 @@ def get_image_from_path(
     if not isinstance(img_entry, str):
         return img_entry
     if is_http(img_entry):
-        if ret_bytes:
-            # Returns BytesIO.
-            return get_image_from_http_bytes(img_entry)
-        return img_entry
-    if src_path or os.path.isabs(img_entry):
+        return get_image_from_http_bytes(img_entry) if ret_bytes else img_entry
+    if src_path:
         return get_abs_path(src_path, img_entry)
-    if path_exists(img_entry):
-        with open_file(img_entry, "rb") as f:
-            if ret_bytes:
-                return f.read()
-            return f
-    else:
+    elif not src_path and os.path.isabs(img_entry):
+        return get_abs_path(src_path, img_entry)
+    if not path_exists(img_entry):
         return bytes(img_entry, "utf-8")
+    with open_file(img_entry, "rb") as f:
+        return f.read() if ret_bytes else f
 
 
 def is_image(src_path: str, img_entry: Union[bytes, str]) -> bool:
@@ -154,8 +148,7 @@ def read_image_from_str(img: str, num_channels: Optional[int] = None) -> torch.T
         else:
             return read_image(img)
     except HTTPError as e:
-        upgraded = upgrade_http(img)
-        if upgraded:
+        if upgraded := upgrade_http(img):
             logger.info(f"reading image url {img} failed due to {e}. upgrading to https and retrying")
             return read_image(upgraded)
         logger.info(f"reading image url {img} failed due to {e} and cannot be upgraded to https")
@@ -231,10 +224,7 @@ def num_channels_in_image(img: torch.Tensor):
     if img is None or img.ndim < 2:
         raise ValueError("Invalid image data")
 
-    if img.ndim == 2:
-        return 1
-    else:
-        return img.shape[0]
+    return 1 if img.ndim == 2 else img.shape[0]
 
 
 def to_np_tuple(prop: Union[int, Iterable]) -> np.ndarray:

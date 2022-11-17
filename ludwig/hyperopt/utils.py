@@ -36,7 +36,6 @@ def load_json_values(d):
 
 def should_tune_preprocessing(config):
     parameters = config[HYPEROPT][PARAMETERS]
-    for param_name in parameters.keys():
-        if f"{PREPROCESSING}." in param_name:
-            return True
-    return False
+    return any(
+        f"{PREPROCESSING}." in param_name for param_name in parameters.keys()
+    )

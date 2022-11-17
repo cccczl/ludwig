@@ -54,8 +54,7 @@ def avg_num_tokens(field: Series) -> int:
     if len(field) > 5000:
         field = field.sample(n=5000, random_state=40)
     unique_entries = field.unique()
-    avg_words = round(Series(unique_entries).str.split().str.len().mean())
-    return avg_words
+    return round(Series(unique_entries).str.split().str.len().mean())
 
 
 def get_available_resources() -> dict:
@@ -104,7 +103,7 @@ def _add_transfer_config(base_config: Dict, ref_configs: Dict) -> Dict:
                 min_dataset = dataset
 
     if min_dataset is not None:
-        logger.info("Transfer config from dataset {}".format(min_dataset["name"]))
+        logger.info(f'Transfer config from dataset {min_dataset["name"]}')
         min_dataset_config = min_dataset[CONFIG]
         hyperopt_params = base_config[HYPEROPT][PARAMETERS]
         point_to_evaluate = {}
@@ -130,7 +129,7 @@ def _add_option_to_evaluate(
 ) -> Dict:
     options = dataset_config[option_type]
     for option in options.keys():
-        option_param = option_type + "." + option
+        option_param = f"{option_type}." + option
         if option_param in hyperopt_params.keys():
             option_val = options[option]
             point_to_evaluate[option_param] = option_val

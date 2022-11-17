@@ -52,15 +52,13 @@ def run_api_experiment(input_features, output_features):
         "training": {"epochs": 2},
     }
 
-    model = LudwigModel(config)
-    return model
+    return LudwigModel(config)
 
 
 @pytest.fixture(scope="module")
 def experiment_to_use():
     with TemporaryDirectory() as tmpdir:
-        experiment = Experiment("data_for_test.csv", tmpdir)
-        return experiment
+        return Experiment("data_for_test.csv", tmpdir)
 
 
 class Experiment:

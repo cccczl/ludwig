@@ -44,16 +44,15 @@ def embedding_matrix(
         if pretrained_embeddings:
             embeddings_matrix = load_pretrained_embeddings(pretrained_embeddings, vocab)
             if embeddings_matrix.shape[-1] != embedding_size:
-                if not force_embedding_size:
-                    embedding_size = embeddings_matrix.shape[-1]
-                    logger.info(f"Setting embedding size to be equal to {embeddings_matrix.shape[-1]}.")
-                else:
+                if force_embedding_size:
                     raise ValueError(
                         f"The size of the pretrained embeddings is "
                         f"{embeddings_matrix.shape[-1]}, but the specified "
                         f"embedding_size is {embedding_size}. Please change "
                         f"the embedding_size accordingly."
                     )
+                embedding_size = embeddings_matrix.shape[-1]
+                logger.info(f"Setting embedding size to be equal to {embeddings_matrix.shape[-1]}.")
             embedding_initializer_obj = torch.tensor(embeddings_matrix, dtype=torch.float32)
 
         else:
@@ -65,10 +64,12 @@ def embedding_matrix(
                 )
                 embedding_size = vocab_size
 
-            if embedding_initializer is not None:
-                embedding_initializer_obj_ref = get_initializer(embedding_initializer)
-            else:
-                embedding_initializer_obj_ref = get_initializer({TYPE: "uniform", "a": -1.0, "b": 1.0})
+            embedding_initializer_obj_ref = (
+                get_initializer(embedding_initializer)
+                if embedding_initializer is not None
+                else get_initializer({TYPE: "uniform", "a": -1.0, "b": 1.0})
+            )
+
             embedding_initializer_obj = embedding_initializer_obj_ref([vocab_size, embedding_size])
 
         embeddings = embedding_initializer_obj
@@ -141,10 +142,7 @@ class Embed(LudwigModule):
             embedding_initializer=embedding_initializer,
         )
 
-        if dropout > 0:
-            self.dropout = torch.nn.Dropout(p=dropout)
-        else:
-            self.dropout = None
+        self.dropout = torch.nn.Dropout(p=dropout) if dropout > 0 else None
 
     def forward(self, inputs: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         if inputs.ndim != 2 or inputs.shape[1] != 1:
@@ -197,15 +195,11 @@ class EmbedSet(LudwigModule):
             embedding_initializer=embedding_initializer,
         )
 
-        if dropout > 0:
-            self.dropout = torch.nn.Dropout(p=dropout)
-        else:
-            self.dropout = None
-
-        if aggregation_function == "sum":
-            self.aggregation_function = torch.sum
-        elif aggregation_function == "avg":
+        self.dropout = torch.nn.Dropout(p=dropout) if dropout > 0 else None
+        if aggregation_function == "avg":
             self.aggregation_function = torch.mean
+        elif aggregation_function == "sum":
+            self.aggregation_function = torch.sum
         else:
             raise ValueError(f"Unsupported aggregation function {aggregation_function}")
 
@@ -271,11 +265,7 @@ class EmbedWeighted(LudwigModule):
         )
         self.vocab_size = len(vocab)
 
-        if dropout > 0:
-            self.dropout = nn.Dropout(dropout)
-        else:
-            self.dropout = None
-
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else None
         self.register_buffer("vocab_indices", torch.arange(self.vocab_size, dtype=torch.int32))
 
     def forward(self, inputs: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
@@ -400,10 +390,7 @@ class EmbedSequence(LudwigModule):
             embedding_initializer=embedding_initializer,
         )
 
-        if dropout > 0:
-            self.dropout = nn.Dropout(dropout)
-        else:
-            self.dropout = None
+        self.dropout = nn.Dropout(dropout) if dropout > 0 else None
 
     def forward(self, inputs: torch.Tensor, mask: Optional[torch.Tensor] = None):
         if inputs.dtype not in [torch.int, torch.long]:

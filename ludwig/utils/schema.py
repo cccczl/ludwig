@@ -28,7 +28,7 @@ def get_schema():
     output_feature_types = sorted(list(output_type_registry.keys()))
     combiner_types = sorted(list(combiner_registry.keys()))
 
-    schema = {
+    return {
         "type": "object",
         "properties": {
             "input_features": {
@@ -37,7 +37,10 @@ def get_schema():
                     "type": "object",
                     "properties": {
                         "name": {"type": "string"},
-                        "type": {"type": "string", "enum": input_feature_types},
+                        "type": {
+                            "type": "string",
+                            "enum": input_feature_types,
+                        },
                         "column": {"type": "string"},
                         "encoder": {"type": "string"},
                     },
@@ -52,7 +55,10 @@ def get_schema():
                     "type": "object",
                     "properties": {
                         "name": {"type": "string"},
-                        "type": {"type": "string", "enum": output_feature_types},
+                        "type": {
+                            "type": "string",
+                            "enum": output_feature_types,
+                        },
                         "column": {"type": "string"},
                         "decoder": {"type": "string"},
                     },
@@ -76,7 +82,6 @@ def get_schema():
         "definitions": get_custom_definitions(),
         "required": ["input_features", "output_features"],
     }
-    return schema
 
 
 def get_input_encoder_conds(input_feature_types):
@@ -159,7 +164,7 @@ def get_custom_definitions():
 def create_cond(if_pred, then_pred):
     return {
         "if": {"properties": {k: {"const": v} for k, v in if_pred.items()}},
-        "then": {"properties": {k: v for k, v in then_pred.items()}},
+        "then": {"properties": dict(then_pred.items())},
     }
 
 

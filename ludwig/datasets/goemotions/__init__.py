@@ -39,8 +39,9 @@ class GoEmotions(UncompressedFileDownloadMixin, MultifileJoinProcessMixin, CSVLo
         super().__init__(dataset_name="goemotions", cache_dir=cache_dir)
 
     def read_file(self, filetype, filename, header=None):
-        file_df = pd.read_table(os.path.join(self.raw_dataset_path, filename), header=header)
-        return file_df
+        return pd.read_table(
+            os.path.join(self.raw_dataset_path, filename), header=header
+        )
 
     def process_downloaded_dataset(self):
         super().process_downloaded_dataset()

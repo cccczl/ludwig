@@ -58,23 +58,13 @@ class CometCallback(Callback):
 
     def on_train_start(self, model, config, config_fp, *args, **kwargs):
         logger.info("comet.on_train_start() called......")
-        if self.cometml_experiment:
-            # todo v0.4: currently not clear way to set model graph
-            # see: https://github.com/comet-ml/issue-tracking/issues/296
-            # if model:
-            #     self.cometml_experiment.set_model_graph(
-            #         str(model._graph.as_graph_def()))
-
-            if config:
-                if config_fp:
-                    base_name = os.path.basename(config_fp)
-                else:
-                    base_name = "config.yaml"
-                if "." in base_name:
-                    base_name = base_name.rsplit(".", 1)[0] + ".json"
-                else:
-                    base_name = base_name + ".json"
-                self.cometml_experiment.log_asset_data(config, base_name)
+        if self.cometml_experiment and config:
+            base_name = os.path.basename(config_fp) if config_fp else "config.yaml"
+            if "." in base_name:
+                base_name = base_name.rsplit(".", 1)[0] + ".json"
+            else:
+                base_name = f"{base_name}.json"
+            self.cometml_experiment.log_asset_data(config, base_name)
 
     def on_train_end(self, output_directory, *args, **kwargs):
         logger.info("comet.on_train_end() called......")

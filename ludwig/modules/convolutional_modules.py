@@ -59,10 +59,7 @@ class Conv1DLayer(LudwigModule):
         self.dilation = dilation
         self.groups = groups
         self.pool_size = pool_size
-        if pool_strides is None:
-            self.pool_strides = pool_size
-        else:
-            self.pool_strides = pool_strides
+        self.pool_strides = pool_size if pool_strides is None else pool_strides
         if pool_padding == "same" and pool_size is not None:
             self.pool_padding = (self.pool_size - 1) // 2
         else:
@@ -171,15 +168,16 @@ class Conv1DStack(LudwigModule):
                 ]
             else:
                 self.layers = []
-                for i in range(num_layers):
-                    self.layers.append(
-                        {
-                            "filter_size": default_filter_size,
-                            "num_filters": default_num_filters,
-                            "pool_size": default_pool_size,
-                            "pool_strides": default_pool_strides,
-                        }
-                    )
+                self.layers.extend(
+                    {
+                        "filter_size": default_filter_size,
+                        "num_filters": default_num_filters,
+                        "pool_size": default_pool_size,
+                        "pool_strides": default_pool_strides,
+                    }
+                    for _ in range(num_layers)
+                )
+
         else:
             self.layers = layers
 
@@ -264,7 +262,7 @@ class Conv1DStack(LudwigModule):
         hidden = inputs
 
         # todo: enumerate for debugging, remove after testing
-        for i, layer in enumerate(self.stack):
+        for layer in self.stack:
             hidden = layer(hidden)
 
         if hidden.shape[1] == 0:
@@ -391,10 +389,8 @@ class ParallelConv1D(LudwigModule):
         # inputs: [batch_size, seq_size, in_channels)
 
         hidden = inputs
-        hiddens = []
+        hiddens = [layer(hidden) for layer in self.parallel_layers]
 
-        for layer in self.parallel_layers:
-            hiddens.append(layer(hidden))
         hidden = torch.cat(hiddens, 2)
 
         if hidden.shape[1] == 0:
@@ -683,14 +679,15 @@ class Conv2DStack(LudwigModule):
                 ]
             else:
                 self.layers = []
-                for i in range(num_layers):
-                    self.layers.append(
-                        {
-                            "kernel_size": default_kernel_size,
-                            "out_channels": default_out_channels,
-                            "pool_kernel_size": default_pool_kernel_size,
-                        }
-                    )
+                self.layers.extend(
+                    {
+                        "kernel_size": default_kernel_size,
+                        "out_channels": default_out_channels,
+                        "pool_kernel_size": default_pool_kernel_size,
+                    }
+                    for _ in range(num_layers)
+                )
+
         else:
             self.layers = layers
 
@@ -809,10 +806,7 @@ class Conv2DLayerFixedPadding(LudwigModule):
         self.layers = torch.nn.ModuleList()
         self._input_shape = (in_channels, img_height, img_width)
 
-        padding = "same"
-        if stride > 1:
-            padding = (kernel_size - 1) // 2
-
+        padding = (kernel_size - 1) // 2 if stride > 1 else "same"
         self.layers.append(
             nn.Conv2d(
                 in_channels=in_channels,
@@ -1242,14 +1236,12 @@ class ResNet(LudwigModule):
         self._output_shape = (in_channels, img_height, img_width)
 
     def get_is_bottleneck(self, resnet_size: int, block_sizes: List[int]) -> bool:
-        if (resnet_size is not None and resnet_size >= 50) or (block_sizes is not None and sum(block_sizes) >= 16):
-            return True
-        return False
+        return (resnet_size is not None and resnet_size >= 50) or (
+            block_sizes is not None and sum(block_sizes) >= 16
+        )
 
     def get_block_fn(self, is_bottleneck: bool) -> Union[ResNetBlock, ResNetBottleneckBlock]:
-        if is_bottleneck:
-            return ResNetBottleneckBlock
-        return ResNetBlock
+        return ResNetBottleneckBlock if is_bottleneck else ResNetBlock
 
     def get_blocks(self, resnet_size: int, block_sizes: List[int], block_strides: List[int]) -> Tuple[List[int]]:
         if block_sizes is None:
@@ -1310,7 +1302,6 @@ def get_resnet_block_sizes(resnet_size):
     try:
         return resnet_choices[resnet_size]
     except KeyError:
-        err = "Could not find layers for selected Resnet size.\n" "Size received: {}; sizes allowed: {}.".format(
-            resnet_size, resnet_choices.keys()
-        )
+        err = f"Could not find layers for selected Resnet size.\nSize received: {resnet_size}; sizes allowed: {resnet_choices.keys()}."
+
         raise ValueError(err)
